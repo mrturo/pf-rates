@@ -1,7 +1,10 @@
 # Auto-detected at install time; override with PYTHON=pythonX.Y to pin a specific interpreter.
 PYTHON ?= python3.12
 VENV ?= .venv
-NERDCTL ?= nerdctl
+# Auto-detect the correct nerdctl invocation.
+# Rancher Desktop routes nerdctl through Docker-managed containerd; the default
+# k3s socket is absent on that setup, so we fall back to the Docker socket address.
+NERDCTL ?= $(shell nerdctl info >/dev/null 2>&1 && echo "nerdctl" || echo "nerdctl --address /var/run/docker/containerd/containerd.sock")
 DB_CONTAINER ?= pf-rates-postgres
 DB_VOLUME ?= pf-rates-postgres-data
 DB_NAME ?= rates
