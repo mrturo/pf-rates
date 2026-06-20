@@ -1,0 +1,1 @@
+"""External rate provider adapters."""
