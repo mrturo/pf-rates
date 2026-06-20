@@ -15,11 +15,17 @@ DB_NAME ?= rates
 DB_USER ?= rates
 DB_PASSWORD ?= rates
 DB_PORT ?= 5433
+ADMINER_CONTAINER ?= pf-rates-adminer
+ADMINER_PORT ?= 8090
 APP_PORT ?= 8001
 ENV_FILE ?= .env
 VENV_BIN = PATH="$(VENV)/bin:$$PATH"
 
 DB_ENV = NERDCTL_BIN="$(NERDCTL)" DB_CONTAINER="$(DB_CONTAINER)" DB_VOLUME="$(DB_VOLUME)" DB_NAME="$(DB_NAME)" DB_USER="$(DB_USER)" DB_PASSWORD="$(DB_PASSWORD)" DB_PORT="$(DB_PORT)"
+DB_SEED_FLAG_base =
+DB_SEED_FLAG_test = APPLY_TEST_SEED=1
+DB_SEED_FLAG_real = APPLY_REAL_SEED=1
+ADMINER_ENV = NERDCTL_BIN="$(NERDCTL)" ADMINER_CONTAINER="$(ADMINER_CONTAINER)" ADMINER_PORT="$(ADMINER_PORT)"
 
 # Corporate registry URLs — set in .env; empty here so .env values take priority.
 CORPORATIVE_PIP_INDEX ?=
@@ -78,28 +84,60 @@ env-write:
 	@printf 'CORPORATIVE_NPM_REGISTRY=https://npm.ci.artifacts.corporative.com/artifactory/api/npm/external-npm\n' >> $(ENV_FILE)
 	@echo "  ✓ $(ENV_FILE) written"
 
-# Starts the PostgreSQL container and applies schema + seed.
+# Internal: run scripts/db.sh with a selected action and optional seed mode.
+_db-flow:
+	$(DB_ENV) $(DB_SEED_FLAG_$(SEED_MODE)) ./scripts/db.sh $(DB_ACTION)
+
+# Starts PostgreSQL with the base schema and seed data.
 db-up:
-	$(NERDCTL) run -d \
-	  --name $(DB_CONTAINER) \
-	  -e POSTGRES_USER=$(DB_USER) \
-	  -e POSTGRES_PASSWORD=$(DB_PASSWORD) \
-	  -e POSTGRES_DB=$(DB_NAME) \
-	  -p $(DB_PORT):5432 \
-	  -v $(DB_VOLUME):/var/lib/postgresql/data \
-	  postgres:16-alpine || true
-	@sleep 2
-	$(NERDCTL) exec -i $(DB_CONTAINER) psql -U $(DB_USER) -d $(DB_NAME) < db/01_schema.sql
-	$(NERDCTL) exec -i $(DB_CONTAINER) psql -U $(DB_USER) -d $(DB_NAME) < db/02_seed_currencies.sql
-	@echo "  ✓ Database ready"
+	$(MAKE) --no-print-directory _db-flow DB_ACTION=up SEED_MODE=base
+
+# Starts PostgreSQL and also loads test fixtures.
+db-up-test:
+	$(MAKE) --no-print-directory _db-flow DB_ACTION=up SEED_MODE=test
+
+# Starts PostgreSQL and also loads real operational seed data.
+db-up-real:
+	$(MAKE) --no-print-directory _db-flow DB_ACTION=up SEED_MODE=real
+
+# Recreates the schema and reloads only base seed data.
+db-reset-data:
+	$(MAKE) --no-print-directory _db-flow DB_ACTION=reset-data SEED_MODE=base
+
+# Recreates the schema and reloads base + test seed data.
+db-reset-data-test:
+	$(MAKE) --no-print-directory _db-flow DB_ACTION=reset-data SEED_MODE=test
+
+# Recreates the schema and reloads base + real operational seed data.
+db-reset-data-real:
+	$(MAKE) --no-print-directory _db-flow DB_ACTION=reset-data SEED_MODE=real
 
 # Stops and removes the PostgreSQL container.
 db-down:
-	$(NERDCTL) rm -f $(DB_CONTAINER) || true
+	$(MAKE) --no-print-directory _db-flow DB_ACTION=down SEED_MODE=base
 
 # Opens an interactive psql session inside the PostgreSQL container.
 db-psql:
-	$(NERDCTL) exec -it $(DB_CONTAINER) psql -U $(DB_USER) -d $(DB_NAME)
+	$(MAKE) --no-print-directory _db-flow DB_ACTION=psql SEED_MODE=base
+
+# Starts Adminer after ensuring PostgreSQL is up.
+adminer-up: db-up
+	$(ADMINER_ENV) ./scripts/adminer.sh up
+
+# Stops and removes the Adminer container.
+adminer-down:
+	$(ADMINER_ENV) ./scripts/adminer.sh down
+
+# Unsets common proxy variables in the current shell invocation.
+unset-proxy-vars:
+	@bash -eu -o pipefail -c 'vars=(http_proxy https_proxy all_proxy no_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY); for v in "$${vars[@]}"; do if [[ -n "$${!v-}" ]]; then printf "  ✓ Unsetting %s → %s\n" "$$v" "$${!v}"; unset "$$v"; else printf "  · %s not set\n" "$$v"; fi; done'
+
+# Brings up the full local stack (DB, Adminer, env, deps, and API).
+local-up:
+	$(DB_ENV) $(ADMINER_ENV) APP_PORT="$(APP_PORT)" VENV="$(VENV)" ENV_FILE="$(ENV_FILE)" \
+	  CORPORATIVE_PIP_INDEX="$(CORPORATIVE_PIP_INDEX)" \
+	  CORPORATIVE_NPM_REGISTRY="$(CORPORATIVE_NPM_REGISTRY)" \
+	  ./scripts/local_stack.sh
 
 # Runs the FastAPI server in development mode with auto-reload.
 run: env-write
