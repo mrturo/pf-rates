@@ -11,24 +11,8 @@ log() {
   printf '[adminer] %s\n' "$1"
 }
 
-runtime_available() {
-  # Accepts a single binary name or a multi-word command string.
-  eval "$* info" >/dev/null 2>&1
-}
-
-select_runtime() {
-  if [[ "$NERDCTL_BIN" != "auto" ]] && runtime_available "$NERDCTL_BIN"; then
-    read -ra CLI <<< "$NERDCTL_BIN"
-  elif runtime_available nerdctl; then
-    CLI=(nerdctl)
-  elif runtime_available docker; then
-    CLI=(docker)
-  else
-    echo "No working container CLI found. Start Rancher Desktop and ensure nerdctl or docker is available." >&2
-    exit 1
-  fi
-  log "Using container runtime: ${CLI[*]}"
-}
+# shellcheck source=runtime.sh
+source "$(dirname "${BASH_SOURCE[0]}")/runtime.sh"
 
 container_exists() {
   "${CLI[@]}" container inspect "$ADMINER_CONTAINER" >/dev/null 2>&1

@@ -166,9 +166,9 @@ check:
 	done; \
 	echo "All checks passed."
 
-# Detects duplicated code across src and tests together (cross-boundary clones included).
+# Detects duplicated code across the entire repository (all languages, cross-boundary clones included).
 duplicate-code:
-	$(MAKE) --no-print-directory _duplicate-code DUPLICATE_PATH="src tests" DUPLICATE_THRESHOLD=0
+	$(MAKE) --no-print-directory _duplicate-code DUPLICATE_PATH=. DUPLICATE_THRESHOLD=0
 
 # Detects duplicated code in tests only.
 duplicate-code-tests:
