@@ -146,6 +146,11 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # Export the image to a tar file so Trivy can scan it without
+      # requiring access to the Docker daemon socket (more reliable in CI).
+      - name: Export image to tar for scanning
+        run: docker save pf-rates:scan -o /tmp/pf-rates-scan.tar
+
       # Install Trivy directly — avoids action tag resolution issues.
       # Pinned to a specific version for reproducibility.
       - name: Install Trivy
@@ -153,15 +158,15 @@ jobs:
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
             | sh -s -- -b /usr/local/bin v0.52.0
 
-      # Pass 1: SARIF for GitHub Security tab (exit-code 0 — always upload)
+      # Pass 1: SARIF for GitHub Security tab (exit-code 0 — always creates file)
       - name: Trivy scan — SARIF
         run: |
           trivy image \
+            --input /tmp/pf-rates-scan.tar \
             --format sarif \
             --output trivy-results.sarif \
             --severity CRITICAL,HIGH \
-            --exit-code 0 \
-            pf-rates:scan
+            --exit-code 0
 
       - name: Upload Trivy SARIF to GitHub Security
         uses: github/codeql-action/upload-sarif@v4
@@ -169,14 +174,17 @@ jobs:
         with:
           sarif_file: trivy-results.sarif
 
-      # Pass 2: table output — blocks pipeline on CRITICAL/HIGH findings
+      # Pass 2: pipeline gate — blocks on CRITICAL/HIGH with available fixes.
+      # --ignore-unfixed skips CVEs in the base image that have no fix yet,
+      # avoiding false-positive blocks on python:3.12-slim OS-level packages.
       - name: Trivy scan — pipeline gate
         run: |
           trivy image \
+            --input /tmp/pf-rates-scan.tar \
             --format table \
             --severity CRITICAL,HIGH \
-            --exit-code 1 \
-            pf-rates:scan
+            --ignore-unfixed \
+            --exit-code 1
 
   # ------------------------------------------------------------------
   # deploy: build, push, migrate, deploy (only on push to main)

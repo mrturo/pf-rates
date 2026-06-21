@@ -36,5 +36,7 @@ RUN useradd --no-create-home --shell /bin/false appuser
 USER appuser
 
 # Cloud Run injects PORT at runtime; default to 8080 for local runs.
-# Shell form is required so ${PORT:-8080} is evaluated by the shell.
-CMD uvicorn financial_data.interfaces.api.app:app --host 0.0.0.0 --port ${PORT:-8080}
+# Uses shell form (via sh -c) to allow ${PORT:-8080} variable expansion
+# while properly forwarding OS signals via exec.
+ENTRYPOINT ["sh", "-c"]
+CMD ["exec uvicorn financial_data.interfaces.api.app:app --host 0.0.0.0 --port ${PORT:-8080}"]
