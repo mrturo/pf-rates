@@ -23,7 +23,11 @@ _TC_ENGINE_KWARGS: dict[str, Any] = {"connect_args": {"ssl": False}}
 class _StubSyncUseCase:
     """Stub SyncRecentMarketData that makes no network calls."""
 
-    async def execute(self) -> SyncRecentMarketDataResultDTO:
+    async def execute(
+        self,
+        lookback_days: int | None = None,
+        forward_days: int | None = None,
+    ) -> SyncRecentMarketDataResultDTO:
         """Return an empty result without touching any provider."""
         return SyncRecentMarketDataResultDTO(
             requested_exchange_rates=0,

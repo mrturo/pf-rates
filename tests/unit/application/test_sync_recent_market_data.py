@@ -551,3 +551,32 @@ async def test_execute_requests_forward_dates_for_uf_only() -> None:
     assert future_date not in all_requested.get("EUR", set()), (
         "EUR should not request forward dates"
     )
+
+
+async def test_execute_custom_lookback_limits_requested_window() -> None:
+    """execute(lookback_days=7) requests only 7 days of history, not 365."""
+    today = date(2026, 1, 15)
+    cutoff = today - timedelta(days=7)
+    repository = StubMarketDataRepository()
+    use_case = SyncRecentMarketData(
+        repository,
+        StubFxProvider(),  # type: ignore[arg-type]
+        StubIndexProvider(),  # type: ignore[arg-type]
+        StubReferenceDataRepository(existing_years={2025, 2026}),
+        StubBracketProvider(),  # type: ignore[arg-type]
+        today_provider=lambda: today,
+    )
+
+    await use_case.execute(lookback_days=7, forward_days=0)
+
+    usd_dates = {
+        entry.rate_date
+        for cmd in repository.refreshed
+        for entry in cmd.exchange_rates
+        if entry.currency_code == "USD"
+    }
+    assert len(usd_dates) == 7
+    assert today in usd_dates
+    assert cutoff not in usd_dates, (
+        "dates before the 7-day window must not be requested"
+    )

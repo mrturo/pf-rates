@@ -296,6 +296,22 @@ async def test_sync_endpoint_runs_without_error(http_client: AsyncClient) -> Non
     assert "brackets_upserted" in body
 
 
+async def test_sync_endpoint_accepts_custom_window(http_client: AsyncClient) -> None:
+    """POST /sync accepts optional lookback_days and forward_days overrides."""
+    response = await http_client.post(
+        "/sync", json={"lookback_days": 30, "forward_days": 0}
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert "exchange_rates_upserted" in body
+
+
+async def test_sync_endpoint_rejects_invalid_window(http_client: AsyncClient) -> None:
+    """POST /sync returns 422 for out-of-range window values."""
+    response = await http_client.post("/sync", json={"lookback_days": 0})
+    assert response.status_code == 422
+
+
 # ---------------------------------------------------------------------------
 # Validation errors
 # ---------------------------------------------------------------------------

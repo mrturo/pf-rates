@@ -43,12 +43,25 @@ class SyncRecentMarketData:
     bracket_provider: IncomeTaxBracketProvider
     today_provider: Callable[[], date] = date.today
 
-    async def execute(self) -> SyncRecentMarketDataResultDTO:
-        """Handle execute."""
+    async def execute(
+        self,
+        lookback_days: int | None = None,
+        forward_days: int | None = None,
+    ) -> SyncRecentMarketDataResultDTO:
+        """Handle execute.
+
+        Args:
+            lookback_days: Rolling lookback window in days. Defaults to
+                _LOOKBACK_DAYS (365).
+            forward_days: Forward window for currencies that publish future
+                values (e.g. UF). Defaults to _FORWARD_DAYS (35).
+        """
         today = self.today_provider()
-        daily_dates = self._build_daily_dates(today)
+        actual_lookback = lookback_days if lookback_days is not None else _LOOKBACK_DAYS
+        actual_forward = forward_days if forward_days is not None else _FORWARD_DAYS
+        daily_dates = self._build_daily_dates(today, actual_lookback)
         monthly_dates = self._build_monthly_dates(today)
-        forward_dates = self._build_forward_dates(today)
+        forward_dates = self._build_forward_dates(today, actual_forward)
 
         missing_exchange_rate_requests = await self._collect_missing_exchange_rates(
             daily_dates, monthly_dates, forward_dates
@@ -283,14 +296,18 @@ class SyncRecentMarketData:
             )
         return upserted
 
-    def _build_daily_dates(self, today: date) -> list[date]:
-        """Build daily dates for the rolling one-year window."""
-        start_date = today - timedelta(days=_LOOKBACK_DAYS - 1)
-        return [start_date + timedelta(days=offset) for offset in range(_LOOKBACK_DAYS)]
+    def _build_daily_dates(
+        self, today: date, lookback_days: int = _LOOKBACK_DAYS
+    ) -> list[date]:
+        """Build daily dates for the rolling lookback window."""
+        start_date = today - timedelta(days=lookback_days - 1)
+        return [start_date + timedelta(days=offset) for offset in range(lookback_days)]
 
-    def _build_forward_dates(self, today: date) -> list[date]:
+    def _build_forward_dates(
+        self, today: date, forward_days: int = _FORWARD_DAYS
+    ) -> list[date]:
         """Build future dates for currencies that publish values in advance."""
-        return [today + timedelta(days=i) for i in range(1, _FORWARD_DAYS + 1)]
+        return [today + timedelta(days=i) for i in range(1, forward_days + 1)]
 
     def _build_monthly_dates(self, today: date) -> list[date]:
         """Build monthly dates for the rolling twelve-month window."""

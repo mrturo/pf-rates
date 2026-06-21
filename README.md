@@ -41,7 +41,7 @@ Once running, the interactive docs are available at:
 | `GET` | `/income-tax-brackets` | Matching bracket for a payment date and taxable base. Params: `payment_date`, `taxable_base_utm` |
 | `GET` | `/income-tax-brackets/list` | List all brackets for a year. Param: `year` |
 | `POST` | `/income-tax-brackets/refresh` | Fetch and persist official brackets for a year. |
-| `POST` | `/sync` | Rolling 365-day sync of all missing market data. |
+| `POST` | `/sync` | Rolling sync of all missing market data. Optional body: `{"lookback_days": 365, "forward_days": 35}`. UF includes pre-published future values. |
 
 ## Engineering policy
 
