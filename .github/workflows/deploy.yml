@@ -146,17 +146,22 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Run Trivy twice:
-      #   1st pass — emit SARIF (exit-code 0 so upload always runs)
-      #   2nd pass — gate the pipeline (exit-code 1 on CRITICAL/HIGH)
-      - name: Trivy scan — SARIF output
-        uses: aquasecurity/trivy-action@0.31.0
-        with:
-          image-ref: pf-rates:scan
-          format: sarif
-          output: trivy-results.sarif
-          severity: CRITICAL,HIGH
-          exit-code: "0"
+      # Install Trivy directly — avoids action tag resolution issues.
+      # Pinned to a specific version for reproducibility.
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sh -s -- -b /usr/local/bin v0.52.0
+
+      # Pass 1: SARIF for GitHub Security tab (exit-code 0 — always upload)
+      - name: Trivy scan — SARIF
+        run: |
+          trivy image \
+            --format sarif \
+            --output trivy-results.sarif \
+            --severity CRITICAL,HIGH \
+            --exit-code 0 \
+            pf-rates:scan
 
       - name: Upload Trivy SARIF to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
@@ -164,13 +169,14 @@ jobs:
         with:
           sarif_file: trivy-results.sarif
 
+      # Pass 2: table output — blocks pipeline on CRITICAL/HIGH findings
       - name: Trivy scan — pipeline gate
-        uses: aquasecurity/trivy-action@0.31.0
-        with:
-          image-ref: pf-rates:scan
-          format: table
-          severity: CRITICAL,HIGH
-          exit-code: "1"
+        run: |
+          trivy image \
+            --format table \
+            --severity CRITICAL,HIGH \
+            --exit-code 1 \
+            pf-rates:scan
 
   # ------------------------------------------------------------------
   # deploy: build, push, migrate, deploy (only on push to main)
