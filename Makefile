@@ -122,6 +122,9 @@ db-reset-data-real:
 db-down:
 	$(MAKE) --no-print-directory _db-flow DB_ACTION=down SEED_MODE=base
 
+# Stops PostgreSQL (if running) and starts it again with the base schema and seed data.
+db-restart: db-down db-up
+
 # Opens an interactive psql session inside the PostgreSQL container.
 db-psql:
 	$(MAKE) --no-print-directory _db-flow DB_ACTION=psql SEED_MODE=base
@@ -131,8 +134,13 @@ adminer-up: db-up
 	$(ADMINER_ENV) ./scripts/adminer.sh up
 
 # Stops and removes the Adminer container.
-adminer-down:
+adminer-down: db-down
 	$(ADMINER_ENV) ./scripts/adminer.sh down
+
+# Stops Adminer (if running) and starts it again — does not restart the database.
+adminer-restart:
+	-$(ADMINER_ENV) ./scripts/adminer.sh down
+	$(ADMINER_ENV) ./scripts/adminer.sh up
 
 # Unsets common proxy variables in the current shell invocation.
 unset-proxy-vars:
