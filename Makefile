@@ -26,6 +26,7 @@ DB_SEED_FLAG_base =
 DB_SEED_FLAG_test = APPLY_TEST_SEED=1
 DB_SEED_FLAG_real = APPLY_REAL_SEED=1
 ADMINER_ENV = NERDCTL_BIN="$(NERDCTL)" ADMINER_CONTAINER="$(ADMINER_CONTAINER)" ADMINER_PORT="$(ADMINER_PORT)"
+UNSET_PROXY_VARS = bash -eu -o pipefail -c 'vars=(http_proxy https_proxy all_proxy no_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY); for v in "$${vars[@]}"; do if [[ -n "$${!v-}" ]]; then printf "  ✓ Unsetting %s → %s\n" "$$v" "$${!v}"; unset "$$v"; else printf "  • %s not set\n" "$$v"; fi; done'
 
 # Corporate registry URLs — set in .env; empty here so .env values take priority.
 CORPORATIVE_PIP_INDEX ?=
@@ -130,7 +131,7 @@ adminer-down:
 
 # Unsets common proxy variables in the current shell invocation.
 unset-proxy-vars:
-	@bash -eu -o pipefail -c 'vars=(http_proxy https_proxy all_proxy no_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY); for v in "$${vars[@]}"; do if [[ -n "$${!v-}" ]]; then printf "  ✓ Unsetting %s → %s\n" "$$v" "$${!v}"; unset "$$v"; else printf "  • %s not set\n" "$$v"; fi; done'
+	@$(UNSET_PROXY_VARS)
 
 # Brings up the full local stack (DB, Adminer, env, deps, and API).
 local-up:
