@@ -31,6 +31,7 @@ UNSET_PROXY_VARS = bash -eu -o pipefail -c 'vars=(http_proxy https_proxy all_pro
 # Corporate registry URLs — set in .env; empty here so .env values take priority.
 CORPORATIVE_PIP_INDEX ?=
 CORPORATIVE_NPM_REGISTRY ?=
+CORPORATIVE_PROXY ?=
 
 # Docker/testcontainers: auto-detect Rancher Desktop socket and disable Ryuk (Ryuk fails on Rancher Desktop)
 _RANCHER_SOCK = $(HOME)/.docker/run/docker.sock
@@ -65,7 +66,7 @@ install:
 	"$$python_bin" -m venv "$(VENV)"
 	@if curl -sfL --connect-timeout 3 -o /dev/null "$(CORPORATIVE_PIP_INDEX)/" 2>/dev/null; then \
 	  echo "  → Corporative VPN — routing pip through sysproxy"; \
-	  printf '[global]\nproxy = http://sysproxy.wal-mart.com:8080\n' > "$(VENV)/pip.conf"; \
+	  printf '[global]\nproxy = $(CORPORATIVE_PROXY)\n' > "$(VENV)/pip.conf"; \
 	else \
 	  echo "  → No VPN — disabling corporate proxy env vars for pip"; \
 	  printf '[global]\ntrust-env = false\n' > "$(VENV)/pip.conf"; \
@@ -83,6 +84,7 @@ env-write:
 	@printf '\n# Tooling — corporate pip/npm registries (used by make install/check on VPN)\n' >> $(ENV_FILE)
 	@printf 'CORPORATIVE_PIP_INDEX=https://pypi.ci.artifacts.corporative.com/artifactory/api/pypi/pythonhosted-pypi-release-remote/simple\n' >> $(ENV_FILE)
 	@printf 'CORPORATIVE_NPM_REGISTRY=https://npm.ci.artifacts.corporative.com/artifactory/api/npm/external-npm\n' >> $(ENV_FILE)
+	@printf 'CORPORATIVE_PROXY=http://sysproxy.corporative.com:8080\n' >> $(ENV_FILE)
 	@echo "  ✓ $(ENV_FILE) written"
 
 # Internal: run scripts/db.sh with a selected action and optional seed mode.
