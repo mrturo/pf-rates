@@ -130,7 +130,7 @@ adminer-down:
 
 # Unsets common proxy variables in the current shell invocation.
 unset-proxy-vars:
-	@bash -eu -o pipefail -c 'vars=(http_proxy https_proxy all_proxy no_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY); for v in "$${vars[@]}"; do if [[ -n "$${!v-}" ]]; then printf "  ✓ Unsetting %s → %s\n" "$$v" "$${!v}"; unset "$$v"; else printf "  · %s not set\n" "$$v"; fi; done'
+	@bash -eu -o pipefail -c 'vars=(http_proxy https_proxy all_proxy no_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY); for v in "$${vars[@]}"; do if [[ -n "$${!v-}" ]]; then printf "  ✓ Unsetting %s → %s\n" "$$v" "$${!v}"; unset "$$v"; else printf "  • %s not set\n" "$$v"; fi; done'
 
 # Brings up the full local stack (DB, Adminer, env, deps, and API).
 local-up:
@@ -140,7 +140,7 @@ local-up:
 	  ./scripts/local_stack.sh
 
 # Runs the FastAPI server in development mode with auto-reload.
-run: env-write
+run:
 	$(VENV_BIN) uvicorn financial_data.interfaces.api.app:app --reload --port $(APP_PORT)
 
 # Runs the complete test suite.
