@@ -7,7 +7,6 @@ class Settings(BaseSettings):
     """Represent Settings."""
 
     database_url: str = "postgresql+asyncpg://rates:rates@localhost:5433/rates"
-    log_level: str = "INFO"
     rate_provider_timeout_seconds: int = 10
     mindicador_base_url: str = "https://mindicador.cl/api"
     sii_base_url: str = "https://www.sii.cl"
