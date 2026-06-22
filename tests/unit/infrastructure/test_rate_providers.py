@@ -799,7 +799,9 @@ async def test_mindicador_empty_serie_returns_empty() -> None:
 async def test_mindicador_handles_timeout_error() -> None:
     """Mindicador returns empty/None when the fetcher raises TimeoutError."""
     provider = MindicadorRateProvider(
-        fetcher=lambda url, timeout: (_ for _ in ()).throw(TimeoutError("read timed out"))
+        fetcher=lambda url, timeout: (_ for _ in ()).throw(
+            TimeoutError("read timed out")
+        )
     )
 
     assert await provider.fetch_rate("USD", date(2026, 1, 31)) is None
@@ -809,7 +811,9 @@ async def test_mindicador_handles_timeout_error() -> None:
 async def test_sii_indicators_provider_handles_timeout_error() -> None:
     """SII provider returns empty/None when the fetcher raises TimeoutError."""
     provider = SiiIndicatorsProvider(
-        fetcher=lambda url, timeout: (_ for _ in ()).throw(TimeoutError("read timed out"))
+        fetcher=lambda url, timeout: (_ for _ in ()).throw(
+            TimeoutError("read timed out")
+        )
     )
 
     assert await provider.fetch_rate("UTM", date(2026, 1, 15)) is None
@@ -817,7 +821,7 @@ async def test_sii_indicators_provider_handles_timeout_error() -> None:
 
 
 async def test_bcch_series_code_not_configured_returns_empty() -> None:
-    """BCCH returns empty when credentials are present but the series code is missing."""
+    """BCCH returns empty when credentials are set but the series code is missing."""
     provider = BcchSeriesProvider(
         user="user",
         password="pass",
@@ -835,15 +839,19 @@ async def test_bcch_handles_timeout_error() -> None:
         user="user",
         password="pass",
         series_codes={"USD": "USD_SERIES"},
-        fetcher=lambda url, timeout: (_ for _ in ()).throw(TimeoutError("read timed out")),
+        fetcher=lambda url, timeout: (_ for _ in ()).throw(
+            TimeoutError("read timed out")
+        ),
     )
 
     assert await provider.fetch_rate("USD", date(2026, 1, 31)) is None
     assert await provider.fetch_rate_entries("USD", [date(2026, 1, 31)]) == []
 
 
-async def test_chained_provider_logs_exhausted_when_all_providers_return_empty() -> None:
-    """Chain returns empty and logs warning when no provider fills all requested items."""
+async def test_chained_provider_logs_exhausted_when_all_providers_return_empty() -> (
+    None
+):
+    """Chain returns empty and warns when no provider fills all requested items."""
 
     class EmptyFx:
         """Return no entries for any request."""
