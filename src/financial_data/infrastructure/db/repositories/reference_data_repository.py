@@ -69,16 +69,16 @@ class SqlAlchemyReferenceDataRepository:
         ]
 
     async def get_income_tax_bracket(
-        self, payment_date: date, taxable_base_utm: Decimal
+        self, reference_date: date, taxable_base_utm: Decimal
     ) -> IncomeTaxBracketDTO | None:
-        """Return the bracket matching the payment date and taxable base in UTM."""
+        """Return the bracket matching the reference date and taxable base in UTM."""
         result = await self._session.execute(
             select(IncomeTaxBracketModel)
-            .where(IncomeTaxBracketModel.valid_from <= payment_date)
+            .where(IncomeTaxBracketModel.valid_from <= reference_date)
             .where(
                 or_(
                     IncomeTaxBracketModel.valid_to.is_(None),
-                    IncomeTaxBracketModel.valid_to >= payment_date,
+                    IncomeTaxBracketModel.valid_to >= reference_date,
                 )
             )
             .where(IncomeTaxBracketModel.lower_bound_utm <= taxable_base_utm)

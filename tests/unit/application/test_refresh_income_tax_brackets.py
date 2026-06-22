@@ -49,7 +49,7 @@ class StubReferenceDataRepository:
         raise AssertionError("not used")
 
     async def get_income_tax_bracket(
-        self, payment_date: object, taxable_base_utm: object
+        self, reference_date: object, taxable_base_utm: object
     ) -> None:
         """Get income tax bracket."""
         raise AssertionError("not used")

@@ -102,7 +102,7 @@ X-API-Key: <your-key>
 | `GET` | `/economic-indices` | 🔑 | List economic indices. Filter: `?code=UF` |
 | `GET` | `/economic-indices/value` | 🔑 | Index value for a code and period. Params: `code`, `year`, `month` |
 | `POST` | `/economic-indices/refresh` | 🔑 | Upsert economic indices from manual entries or provider fetches. |
-| `GET` | `/income-tax-brackets` | 🔑 | Matching bracket for a payment date and taxable base. Params: `payment_date`, `taxable_base_utm` |
+| `GET` | `/income-tax-brackets` | 🔑 | Matching bracket for a reference date and taxable base. Params: `reference_date`, `taxable_base_utm` |
 | `GET` | `/income-tax-brackets/list` | 🔑 | List all brackets for a year. Param: `year` |
 | `POST` | `/income-tax-brackets/refresh` | 🔑 | Fetch and persist official brackets for a year. |
 | `POST` | `/sync` | 🔑 | Rolling sync of all missing market data. Optional body: `{"lookback_days": 365, "forward_days": 35}`. UF includes pre-published future values. |

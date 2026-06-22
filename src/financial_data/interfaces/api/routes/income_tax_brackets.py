@@ -68,16 +68,16 @@ def _to_bracket_read(bracket: IncomeTaxBracketDTO) -> IncomeTaxBracketRead:
 
 @router.get("", response_model=IncomeTaxBracketRead)
 async def get_income_tax_bracket(
-    payment_date: date = Query(...),
+    reference_date: date = Query(...),
     taxable_base_utm: Decimal = Query(...),
     repository: ReferenceDataRepository = Depends(get_reference_data_repository),
 ) -> IncomeTaxBracketRead:
-    """Return the bracket matching the payment date and taxable base in UTM."""
-    bracket = await repository.get_income_tax_bracket(payment_date, taxable_base_utm)
+    """Return the bracket matching the reference date and taxable base in UTM."""
+    bracket = await repository.get_income_tax_bracket(reference_date, taxable_base_utm)
     if bracket is None:
         raise to_http_exception(
             IncomeTaxBracketNotFoundError(
-                f"No income tax bracket found for payment_date={payment_date} "
+                f"No income tax bracket found for reference_date={reference_date} "
                 f"and taxable_base_utm={taxable_base_utm}."
             )
         )

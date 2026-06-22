@@ -291,7 +291,7 @@ async def test_income_tax_brackets_roundtrip(
 
     # Lookup: taxable_base_utm=20 → bracket [13.5, 30)
     lookup = await http_client.get(
-        "/income-tax-brackets?payment_date=2026-01-15&taxable_base_utm=20"
+        "/income-tax-brackets?reference_date=2026-01-15&taxable_base_utm=20"
     )
     assert lookup.status_code == 200
     data = lookup.json()
@@ -300,7 +300,7 @@ async def test_income_tax_brackets_roundtrip(
 
     # Lookup: 404 when no bracket exists for the date
     not_found = await http_client.get(
-        "/income-tax-brackets?payment_date=2000-01-01&taxable_base_utm=20"
+        "/income-tax-brackets?reference_date=2000-01-01&taxable_base_utm=20"
     )
     assert not_found.status_code == 404
 

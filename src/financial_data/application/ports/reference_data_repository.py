@@ -25,9 +25,9 @@ class ReferenceDataRepository(Protocol):
         ...
 
     async def get_income_tax_bracket(
-        self, payment_date: date, taxable_base_utm: Decimal
+        self, reference_date: date, taxable_base_utm: Decimal
     ) -> IncomeTaxBracketDTO | None:
-        """Return the bracket that matches the payment date and taxable base."""
+        """Return the bracket that matches the reference date and taxable base."""
         ...
 
     async def upsert_income_tax_brackets(
