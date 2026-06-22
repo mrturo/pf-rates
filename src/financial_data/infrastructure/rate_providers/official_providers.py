@@ -16,11 +16,15 @@ from urllib.parse import urlparse, urlencode
 from urllib.request import ProxyHandler, build_opener, getproxies, urlopen
 from typing import TypeVar
 
+import structlog
+
 from financial_data.application.dto import (
     EconomicIndexWriteDTO,
     ExchangeRateWriteDTO,
     IncomeTaxBracketWriteDTO,
 )
+
+_log = structlog.get_logger(__name__)
 
 _MONTHS = {
     "ENERO": 1,
@@ -408,7 +412,8 @@ class MindicadorRateProvider(_FetchRateEntryMixin):
             payload = _parse_json_document(
                 await asyncio.to_thread(self._fetcher, url, self._timeout_seconds)
             )
-        except (HTTPError, URLError, json.JSONDecodeError):
+        except (HTTPError, URLError, json.JSONDecodeError) as exc:
+            _log.warning("mindicador_fetch_failed", indicator=indicator, year=year, error=str(exc))
             self._series_cache[cache_key] = {}
             return {}
 
@@ -529,7 +534,8 @@ class SiiIndicatorsProvider(_SiiBaseProvider, _FetchRateEntryMixin):
         url = f"{self._base_url}/valores_y_fechas/utm/utm{year}.htm"
         try:
             html = await asyncio.to_thread(self._fetcher, url, self._timeout_seconds)
-        except (HTTPError, URLError):
+        except (HTTPError, URLError) as exc:
+            _log.warning("sii_fetch_failed", url=url, error=str(exc))
             self._rows_cache[year] = {}
             return {}
         rows = _extract_sii_rows(html)
@@ -643,7 +649,8 @@ class SiiIncomeTaxBracketProvider(_SiiBaseProvider):
         )
         try:
             html = await asyncio.to_thread(self._fetcher, url, self._timeout_seconds)
-        except (HTTPError, URLError):
+        except (HTTPError, URLError) as exc:
+            _log.warning("sii_income_tax_fetch_failed", url=url, error=str(exc))
             return []
 
         brackets: list[IncomeTaxBracketWriteDTO] = []
@@ -697,7 +704,8 @@ class BcchSeriesProvider(_FetchRateEntryMixin):
             payload = _parse_json_document(
                 await asyncio.to_thread(self._fetcher, url, self._timeout_seconds)
             )
-        except (HTTPError, URLError, json.JSONDecodeError):
+        except (HTTPError, URLError, json.JSONDecodeError) as exc:
+            _log.warning("bcch_fetch_failed", code=code, error=str(exc))
             return []
 
         series = payload.get("Series")
