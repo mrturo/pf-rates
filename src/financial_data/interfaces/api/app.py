@@ -28,6 +28,7 @@ from financial_data.interfaces.api.routes.income_tax_brackets import (
     router as income_tax_brackets_router,
 )
 from financial_data.interfaces.api.routes.sync import router as sync_router
+from financial_data.interfaces.api.security import verify_api_key
 
 _root_router = APIRouter()
 
@@ -47,7 +48,12 @@ async def health() -> dict[str, str]:
     return {"status": "ok", "service": "pf-rates"}
 
 
-@_root_router.get("/currencies", tags=["currencies"], response_model=list[CurrencyRead])
+@_root_router.get(
+    "/currencies",
+    tags=["currencies"],
+    response_model=list[CurrencyRead],
+    dependencies=[Depends(verify_api_key)],
+)
 async def list_currencies(
     repository: ReferenceDataRepository = Depends(get_reference_data_repository),
 ) -> list[CurrencyRead]:
@@ -144,7 +150,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 app.include_router(_root_router)
-app.include_router(exchange_rates_router)
-app.include_router(economic_indices_router)
-app.include_router(income_tax_brackets_router)
-app.include_router(sync_router)
+app.include_router(exchange_rates_router, dependencies=[Depends(verify_api_key)])
+app.include_router(economic_indices_router, dependencies=[Depends(verify_api_key)])
+app.include_router(income_tax_brackets_router, dependencies=[Depends(verify_api_key)])
+app.include_router(sync_router, dependencies=[Depends(verify_api_key)])

@@ -83,6 +83,7 @@ reinstall: clean
 # Writes a local .env file with database connection and tooling defaults.
 env-write:
 	@printf 'FINANCIAL_DATA_DATABASE_URL=postgresql+asyncpg://$(DB_USER):$(DB_PASSWORD)@localhost:$(DB_PORT)/$(DB_NAME)\n' > $(ENV_FILE)
+	@printf 'FINANCIAL_DATA_API_KEY=change-me-before-use\n' >> $(ENV_FILE)
 	@printf '\n# Tooling — corporate pip/npm registries (used by make install/check on VPN)\n' >> $(ENV_FILE)
 	@printf 'CORPORATIVE_PIP_INDEX=https://pypi.ci.artifacts.corporative.com/artifactory/api/pypi/pythonhosted-pypi-release-remote/simple\n' >> $(ENV_FILE)
 	@printf 'CORPORATIVE_NPM_REGISTRY=https://npm.ci.artifacts.corporative.com/artifactory/api/npm/external-npm\n' >> $(ENV_FILE)

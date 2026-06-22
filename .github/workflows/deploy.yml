@@ -76,10 +76,19 @@
 #   #      CMD ["uvicorn", "financial_data.interfaces.api.app:app", \
 #   #           "--host", "0.0.0.0", "--port", "8080"]
 #
+#   # 8b. Create the API_KEY secret (one-time setup, after step 7)
+#   echo -n "<STRONG_RANDOM_KEY>" | \
+#     gcloud secrets create FINANCIAL_DATA_API_KEY --data-file=-
+#
+#   gcloud secrets add-iam-policy-binding FINANCIAL_DATA_API_KEY \
+#     --member="serviceAccount:${SA}" \
+#     --role="roles/secretmanager.secretAccessor"
+#
 # Required GitHub Secrets:
 #   GCP_SA_KEY                      — service account JSON key (base64 or raw JSON)
 #   GCP_PROJECT_ID                  — GCP project ID
 #   FINANCIAL_DATA_DATABASE_URL     — stored in Secret Manager; referenced below
+#   FINANCIAL_DATA_API_KEY          — stored in Secret Manager; injected at runtime
 #   FINANCIAL_DATA_BCCH_API_USER    — (optional) Banco Central API user
 #   FINANCIAL_DATA_BCCH_API_PASSWORD — (optional) Banco Central API password
 #
@@ -332,7 +341,7 @@ jobs:
             --memory=512Mi \
             --cpu=1 \
             --port=8080 \
-            --set-secrets="FINANCIAL_DATA_DATABASE_URL=FINANCIAL_DATA_DATABASE_URL:latest" \
+            --set-secrets="FINANCIAL_DATA_DATABASE_URL=FINANCIAL_DATA_DATABASE_URL:latest,FINANCIAL_DATA_API_KEY=FINANCIAL_DATA_API_KEY:latest" \
             --set-env-vars="FINANCIAL_DATA_HTTP_PROXY=" \
             --quiet \
             ${CLOUDSQL_FLAG}

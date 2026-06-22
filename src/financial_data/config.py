@@ -7,6 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Represent Settings."""
 
+    api_key: str
     database_url: str = "postgresql+asyncpg://rates:rates@localhost:5433/rates"
     rate_provider_timeout_seconds: int = 10
     http_proxy: str | None = None
@@ -37,4 +38,4 @@ class Settings(BaseSettings):
     )
 
 
-settings = Settings()
+settings = Settings()  # type: ignore[call-arg]

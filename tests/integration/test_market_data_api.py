@@ -7,6 +7,7 @@ http_client (function-scoped) are defined in conftest.py.
 
 from datetime import date, UTC
 from decimal import Decimal
+from typing import Any
 
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -31,6 +32,13 @@ from financial_data.interfaces.api.dependencies import (
     get_session,
     get_sync_use_case,
 )
+
+# Shared kwargs for inline AsyncClient calls that require authentication.
+_AUTHED_CLIENT: dict[str, Any] = {
+    "transport": ASGITransport(app=app),
+    "base_url": "http://test",
+    "headers": {"X-API-Key": "test-key"},
+}
 
 
 def _make_session_override(
@@ -592,9 +600,7 @@ async def test_refresh_income_tax_brackets_route_success(pg_url: str) -> None:
         _StubRefreshBrackets()
     )
     try:
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
+        async with AsyncClient(**_AUTHED_CLIENT) as client:
             response = await client.post(
                 "/income-tax-brackets/refresh", json={"year": 2026}
             )
@@ -629,9 +635,7 @@ async def test_refresh_income_tax_brackets_route_propagates_error(
         _FailingRefreshBrackets()
     )
     try:
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
+        async with AsyncClient(**_AUTHED_CLIENT) as client:
             response = await client.post(
                 "/income-tax-brackets/refresh", json={"year": 2026}
             )
@@ -666,9 +670,7 @@ async def test_refresh_economic_indices_route_propagates_error(pg_url: str) -> N
         _FailingRefreshRates()
     )
     try:
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
+        async with AsyncClient(**_AUTHED_CLIENT) as client:
             response = await client.post(
                 "/economic-indices/refresh",
                 json={
@@ -687,3 +689,37 @@ async def test_refresh_economic_indices_route_propagates_error(pg_url: str) -> N
     finally:
         app.dependency_overrides.clear()
         await engine.dispose()
+
+
+# ---------------------------------------------------------------------------
+# Authentication
+# ---------------------------------------------------------------------------
+
+
+async def test_missing_api_key_returns_403() -> None:
+    """Protected endpoints return 403 when X-API-Key header is absent."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.get("/currencies")
+    assert response.status_code == 403
+
+
+async def test_wrong_api_key_returns_403() -> None:
+    """Protected endpoints return 403 when X-API-Key does not match."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"X-API-Key": "wrong-key"},
+    ) as client:
+        response = await client.get("/currencies")
+    assert response.status_code == 403
+
+
+async def test_health_endpoint_is_public() -> None:
+    """GET /health is accessible without any API key."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.get("/health")
+    assert response.status_code == 200

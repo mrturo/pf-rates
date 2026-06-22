@@ -133,7 +133,9 @@ async def http_client(pg_url: str) -> AsyncClient:
     app.dependency_overrides[get_sync_use_case] = _stub_get_sync_use_case
     try:
         async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
+            transport=ASGITransport(app=app),
+            base_url="http://test",
+            headers={"X-API-Key": "test-key"},
         ) as client:
             yield client
     finally:
