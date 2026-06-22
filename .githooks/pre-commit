@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# pre-commit: lint · dead-code · typecheck
+# Skip in emergencies with: git commit --no-verify
+set -euo pipefail
+
+VENV=".venv"
+if [ ! -d "$VENV" ]; then
+  echo "❌  Virtualenv not found. Run: make install"
+  exit 1
+fi
+export PATH="$VENV/bin:$PATH"
+
+FAILED=0
+
+echo "==> [pre-commit] lint"
+if ! ruff check src tests; then
+  FAILED=1
+fi
+if ! ruff format --check src tests; then
+  FAILED=1
+fi
+
+if [ "$FAILED" -ne 0 ]; then
+  echo ""
+  echo "⚠️  Lint failed. Run 'make lint' to auto-fix, then re-stage and commit."
+  exit 1
+fi
+
+echo "==> [pre-commit] dead-code"
+vulture --config pyproject.toml
+
+echo "==> [pre-commit] typecheck"
+mypy src
+
+echo ""
+echo "✓ pre-commit checks passed"

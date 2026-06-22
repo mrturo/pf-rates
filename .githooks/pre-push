@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# pre-push: duplicate-code detection (src + tests)
+# Skip in emergencies with: git push --no-verify
+set -euo pipefail
+
+echo "==> [pre-push] duplicate-code-src"
+make --no-print-directory duplicate-code-src
+
+echo "==> [pre-push] duplicate-code-tests"
+make --no-print-directory duplicate-code-tests
+
+echo ""
+echo "✓ pre-push checks passed"
+echo ""
+echo "ℹ️  Run 'make test-cov' before merging to main."

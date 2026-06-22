@@ -72,6 +72,8 @@ install:
 	  printf '[global]\ntrust-env = false\n' > "$(VENV)/pip.conf"; \
 	fi
 	. "$(VENV)/bin/activate" && python -m pip install -U pip && python -m pip install -e ".[dev]"
+	git config core.hooksPath .githooks
+	@echo "  ✓ Git hooks configured (.githooks/)"
 
 # Removes all generated artifacts and recreates the virtual environment from scratch.
 reinstall: clean
