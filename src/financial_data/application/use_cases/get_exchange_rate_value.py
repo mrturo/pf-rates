@@ -31,7 +31,7 @@ class GetExchangeRateValue:
             return value
 
         entry = await self.provider.fetch_rate_entry(currency_code, rate_date)
-        if entry is None or entry.rate_date != rate_date:
+        if entry is None:
             raise ExchangeRateNotFoundError(
                 f"Exchange rate {currency_code} on {rate_date} not found."
             )

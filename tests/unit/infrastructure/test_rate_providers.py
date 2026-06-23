@@ -163,6 +163,29 @@ async def test_mindicador_rate_provider_carries_previous_year_quote() -> None:
     ]
 
 
+async def test_mindicador_rate_provider_returns_none_for_unpublished_year() -> None:
+    """Test that no cross-year carry-forward is returned for a year with no data.
+
+    When an entire year series is empty (e.g. far-future dates), the provider
+    must return None rather than carrying forward the last value from a prior year.
+    """
+
+    def fetcher(url: str, timeout: int) -> str:
+        if url.endswith("/uf/2026"):
+            return """
+            {"serie":[
+              {"fecha":"2026-07-09T03:00:00.000Z","valor":40844.79}
+            ]}
+            """
+        # 2027 and beyond: no data published yet
+        return '{"serie":[]}'
+
+    provider = MindicadorRateProvider(fetcher=fetcher)
+
+    assert await provider.fetch_rate("UF", date(2027, 7, 28)) is None
+    assert await provider.fetch_rate_entries("UF", [date(2027, 7, 28)]) == []
+
+
 async def test_sii_indicators_provider_parses_utm_and_ipc_rows() -> None:
     """Test sii indicators provider parses utm and ipc rows."""
     html = """

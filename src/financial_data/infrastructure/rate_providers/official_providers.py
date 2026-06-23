@@ -476,6 +476,11 @@ class MindicadorRateProvider(_FetchRateEntryMixin):
         indicator = self._CODE_MAP.get(currency_code.upper())
         if indicator is None:
             return None
+        series = await self._get_year_series(indicator, on.year)
+        if not series:
+            # No data published for this year — avoid cross-year carry-forward
+            # which would silently return a stale value from a prior year.
+            return None
         return await self._get_latest_value_on_or_before(indicator, on)
 
     async def fetch_rate_entries(
@@ -490,7 +495,11 @@ class MindicadorRateProvider(_FetchRateEntryMixin):
         for year, year_dates in _group_dates_by_year(requested_dates).items():
             series = await self._get_year_series(indicator, year)
             current_value: Decimal | None = None
-            if year_dates:
+            if year_dates and series:
+                # Only seed carry-forward from the previous year when this year
+                # has at least some published data.  An empty series means the
+                # year is entirely unpublished; using a cross-year carry-forward
+                # would silently store stale values for future dates.
                 first_requested_date = min(year_dates)
                 current_value = await self._get_latest_value_on_or_before(
                     indicator, first_requested_date

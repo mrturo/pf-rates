@@ -75,29 +75,6 @@ async def test_raises_not_found_when_db_and_provider_both_miss() -> None:
         await use_case.execute("USD", date(2026, 1, 15))
 
 
-async def test_raises_not_found_when_provider_returns_carry_forward_date() -> None:
-    """Raises ExchangeRateNotFoundError when provider returns a different date.
-
-    Providers like Mindicador use a "latest on or before" strategy, so a request
-    for a far-future date may yield an entry whose rate_date is in the past.
-    That carry-forward value must not be accepted as a valid result.
-    """
-    entry = ExchangeRateWriteDTO(
-        currency_code="UF",
-        rate_date=date(2026, 7, 9),  # carry-forward from 2026, not 2027
-        value_clp=Decimal("40844.79"),
-        source="mindicador",
-    )
-    repo = _StubRepository(db_value=None)
-    provider = _StubProvider(entry=entry)
-    use_case = GetExchangeRateValue(repo, provider)
-
-    with pytest.raises(ExchangeRateNotFoundError):
-        await use_case.execute("UF", date(2027, 7, 28))
-
-    assert repo.saved_command is None  # carry-forward must not be persisted
-
-
 async def test_saves_and_returns_provider_value_on_db_miss() -> None:
     """Persists the provider entry and returns its value on a DB miss."""
     entry = ExchangeRateWriteDTO(
