@@ -244,3 +244,54 @@ def test_get_sync_use_case_builds_use_case() -> None:
 
     use_case = get_sync_use_case(_FakeSession())  # type: ignore[arg-type]
     assert isinstance(use_case, SyncRecentMarketData)
+
+
+def test_get_market_data_repository_returns_sqla_repository() -> None:
+    """get_market_data_repository wraps the session in the SQLAlchemy implementation."""
+    from financial_data.infrastructure.db.repositories.market_data_repository import (
+        SqlAlchemyMarketDataRepository,
+    )
+    from financial_data.interfaces.api.dependencies import get_market_data_repository
+
+    class _FakeSession:
+        pass
+
+    repo = get_market_data_repository(_FakeSession())  # type: ignore[arg-type]
+    assert isinstance(repo, SqlAlchemyMarketDataRepository)
+
+
+def test_get_reference_data_repository_returns_sqla_repository() -> None:
+    """get_reference_data_repository returns the SQLAlchemy implementation."""
+    from financial_data.infrastructure.db.repositories.reference_data_repository import (  # noqa: E501
+        SqlAlchemyReferenceDataRepository,
+    )
+    from financial_data.interfaces.api.dependencies import get_reference_data_repository
+
+    class _FakeSession:
+        pass
+
+    repo = get_reference_data_repository(_FakeSession())  # type: ignore[arg-type]
+    assert isinstance(repo, SqlAlchemyReferenceDataRepository)
+
+
+async def test_get_session_yields_session_from_session_local(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """get_session yields the session produced by SessionLocal."""
+    import financial_data.interfaces.api.dependencies as deps_module
+
+    class _StubSession:
+        async def __aenter__(self) -> "_StubSession":
+            return self
+
+        async def __aexit__(self, *args: object) -> None:
+            pass
+
+    monkeypatch.setattr(deps_module, "SessionLocal", lambda: _StubSession())
+
+    yielded: list[object] = []
+    async for session in deps_module.get_session():
+        yielded.append(session)
+
+    assert len(yielded) == 1
+    assert isinstance(yielded[0], _StubSession)
