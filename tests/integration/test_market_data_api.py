@@ -146,7 +146,7 @@ async def test_get_exchange_rate_value_found_and_not_found(
     assert Decimal(found.json()["value_clp"]) == Decimal("1050.000000")
 
     missing = await http_client.get(
-        "/exchange-rates/value?currency_code=EUR&rate_date=2025-01-01"
+        "/exchange-rates/value?currency_code=EUR&rate_date=2099-12-31"
     )
     assert missing.status_code == 404
 

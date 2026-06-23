@@ -7,7 +7,6 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
 from financial_data.application.errors import (
-    ExchangeRateNotFoundError,
     FinancialDataError,
 )
 from financial_data.application.dto import (
@@ -15,6 +14,10 @@ from financial_data.application.dto import (
     ProviderExchangeRateRequestDTO,
     RefreshRatesCommandDTO,
 )
+from financial_data.application.use_cases.get_exchange_rate_value import (
+    GetExchangeRateValue,
+)
+from financial_data.interfaces.api.dependencies import get_exchange_rate_value_use_case
 from financial_data.interfaces.api.routes._refresh_deps import (
     MarketDataRepository,
     RefreshRates,
@@ -82,16 +85,17 @@ async def list_exchange_rates(
 async def get_exchange_rate_value(
     currency_code: str = Query(...),
     rate_date: date = Query(...),
-    repository: MarketDataRepository = Depends(get_market_data_repository),
+    use_case: GetExchangeRateValue = Depends(get_exchange_rate_value_use_case),
 ) -> dict[str, str]:
-    """Return the CLP value for a currency on the given date."""
-    value = await repository.get_exchange_rate_value(currency_code, rate_date)
-    if value is None:
-        raise to_http_exception(
-            ExchangeRateNotFoundError(
-                f"Exchange rate {currency_code} on {rate_date} not found."
-            )
-        )
+    """Return the CLP value for a currency on the given date.
+
+    If the rate is not in the database, it is fetched from the external
+    provider chain, persisted for future lookups, and then returned.
+    """
+    try:
+        value = await use_case.execute(currency_code, rate_date)
+    except FinancialDataError as exc:
+        raise to_http_exception(exc) from exc
     return {"value_clp": str(value)}
 
 

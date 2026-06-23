@@ -23,9 +23,13 @@ from financial_data.application.dto import (
     RefreshRatesResultDTO,
     SyncRecentMarketDataResultDTO,
 )
-from financial_data.application.errors import FinancialDataDependencyError
+from financial_data.application.errors import (
+    ExchangeRateNotFoundError,
+    FinancialDataDependencyError,
+)
 from financial_data.interfaces.api.app import app
 from financial_data.interfaces.api.dependencies import (
+    get_exchange_rate_value_use_case,
     get_market_data_repository,
     get_reference_data_repository,
     get_refresh_income_tax_brackets_use_case,
@@ -162,6 +166,21 @@ class _StubRefreshIncomeTaxBrackets:
         return self._result
 
 
+class _StubGetExchangeRateValue:
+    """Stub GetExchangeRateValue use case."""
+
+    def __init__(self, value: Decimal | None = None) -> None:
+        self._value = value
+
+    async def execute(self, currency_code: str, rate_date: date) -> Decimal:
+        """Return value or raise ExchangeRateNotFoundError."""
+        if self._value is None:
+            raise ExchangeRateNotFoundError(
+                f"Exchange rate {currency_code} on {rate_date} not found."
+            )
+        return self._value
+
+
 class _StubSyncUseCase:
     """Stub SyncRecentMarketData use case."""
 
@@ -211,9 +230,12 @@ async def test_list_exchange_rates_serializes_non_empty_result() -> None:
 
 
 async def test_get_exchange_rate_value_not_found_returns_404() -> None:
-    """GET /exchange-rates/value returns 404 when repository returns None."""
-    stub = _StubMarketDataRepository(exchange_rate_value=None)
-    app.dependency_overrides[get_market_data_repository] = lambda: stub
+    """GET /exchange-rates/value returns 404 when neither DB nor provider has the rate.
+
+    Stubs the full use case to avoid real provider calls.
+    """
+    stub = _StubGetExchangeRateValue(value=None)
+    app.dependency_overrides[get_exchange_rate_value_use_case] = lambda: stub
     app.dependency_overrides[get_sync_use_case] = lambda: _StubSyncUseCase()
     try:
         async with AsyncClient(**_AUTHED) as client:

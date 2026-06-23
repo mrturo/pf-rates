@@ -9,6 +9,9 @@ from financial_data.application.ports.market_data_repository import MarketDataRe
 from financial_data.application.ports.reference_data_repository import (
     ReferenceDataRepository,
 )
+from financial_data.application.use_cases.get_exchange_rate_value import (
+    GetExchangeRateValue,
+)
 from financial_data.application.use_cases.refresh_rates import RefreshRates
 from financial_data.application.use_cases.refresh_income_tax_brackets import (
     RefreshIncomeTaxBrackets,
@@ -119,6 +122,13 @@ def get_income_tax_bracket_provider() -> SiiIncomeTaxBracketProvider:
         timeout_seconds=settings.rate_provider_timeout_seconds,
         fetcher=_fetcher,
     )
+
+
+def get_exchange_rate_value_use_case(
+    repository: MarketDataRepository = Depends(get_market_data_repository),
+) -> GetExchangeRateValue:
+    """Build the GetExchangeRateValue use case."""
+    return GetExchangeRateValue(repository, get_fx_rate_provider())
 
 
 def get_refresh_rates_use_case(
