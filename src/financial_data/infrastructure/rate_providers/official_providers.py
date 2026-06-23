@@ -472,16 +472,20 @@ class MindicadorRateProvider(_FetchRateEntryMixin):
         return previous_year_series[latest_previous_year_date]
 
     async def fetch_rate(self, currency_code: str, on: date) -> Decimal | None:
-        """Handle fetch rate."""
+        """Handle fetch rate.
+
+        Returns only the value published for the exact requested date.
+        Carry-forward (latest-on-or-before) is intentionally NOT used here so
+        that callers such as the on-demand /value endpoint do not receive or
+        cache stale values for dates that CMF has not yet published.
+        Bulk sync operations use fetch_rate_entries, which preserves carry-forward
+        semantics for filling contiguous date ranges.
+        """
         indicator = self._CODE_MAP.get(currency_code.upper())
         if indicator is None:
             return None
         series = await self._get_year_series(indicator, on.year)
-        if not series:
-            # No data published for this year — avoid cross-year carry-forward
-            # which would silently return a stale value from a prior year.
-            return None
-        return await self._get_latest_value_on_or_before(indicator, on)
+        return series.get(on)
 
     async def fetch_rate_entries(
         self, currency_code: str, requested_dates: list[date]
