@@ -113,10 +113,11 @@ class StubMarketDataRepository:
 
 ## CI/CD pipeline
 
-The pipeline lives in `.github/workflows/deploy.yml`. It has two jobs:
+The pipeline lives in `.github/workflows/deploy.yml`. It has three jobs:
 
-- **`test`** — triggered on every PR and push to `main`. Runs lint, pytest, builds the Docker image locally, exports it to a tar file, and runs **Trivy** in two passes: SARIF upload to GitHub Security (exit 0) and a blocking gate on unfixed CRITICAL/HIGH CVEs (exit 1).
-- **`deploy`** — triggered only on push to `main` via the `GCP` GitHub environment. Authenticates to GCP, asserts AR scanning is disabled, builds and pushes the image to Artifact Registry, runs Alembic migrations as a Cloud Run Job with `--wait`, then deploys the Cloud Run Service.
+- **`test`** — triggered on every PR and push to `main`. Runs lint, static analysis (vulture, mypy, jscpd), and pytest with coverage. No Docker.
+- **`build`** — triggered on every PR and push to `main` (needs: `test`). Builds the Docker image locally, exports it to a tar file, and runs **Trivy** in two passes: SARIF upload to GitHub Security (exit 0) and a blocking gate on unfixed CRITICAL/HIGH CVEs (exit 1). On push to `main` only: tags the image for Artifact Registry and uploads it as a GitHub Actions artifact (expires after 1 day).
+- **`deploy`** — triggered only on push to `main` via the `GCP` GitHub environment (needs: `build`). Authenticates to GCP, asserts AR scanning is disabled, loads the image artifact and pushes it to Artifact Registry, runs Alembic migrations as a Cloud Run Job with `--wait`, then deploys the Cloud Run Service.
 
 **Non-negotiable invariants when editing the pipeline:**
 

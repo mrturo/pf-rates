@@ -35,18 +35,21 @@ The service is deployed to **Google Cloud Run** via **GitHub Actions** (`.github
 
 | Event | Jobs |
 | --- | --- |
-| Pull request → `main` | `test` only (lint, pytest, Docker build, Trivy scan) |
-| Push → `main` | `test` → `deploy` (build, push image, migrate, deploy) |
+| Pull request → `main` | `test` → `build` (lint, pytest, Docker build, Trivy scan) |
+| Push → `main` | `test` → `build` → `deploy` (push image to AR, migrate, deploy) |
 
 **`test` job** — runs on every PR and push:
-1. Lint with ruff and run pytest.
-2. Build the Docker image locally (not pushed) for scanning.
-3. Scan the image with **Trivy**: uploads a SARIF report to the GitHub Security tab and blocks the pipeline on unfixed CRITICAL/HIGH CVEs.
+1. Lint with ruff, run static analysis (vulture, mypy, jscpd), and run pytest with coverage. No Docker.
 
-**`deploy` job** — runs only on push to `main`, requires the `GCP` GitHub environment:
+**`build` job** — runs on every PR and push (needs: `test`):
+1. Build the Docker image locally (not pushed) for scanning.
+2. Scan the image with **Trivy**: uploads a SARIF report to the GitHub Security tab and blocks the pipeline on unfixed CRITICAL/HIGH CVEs.
+3. On push to `main` only: tag the image for Artifact Registry and upload it as a GitHub Actions artifact (expires after 1 day).
+
+**`deploy` job** — runs only on push to `main`, requires the `GCP` GitHub environment (needs: `build`):
 1. Authenticate to GCP using a service-account key.
 2. Assert that Artifact Registry vulnerability scanning is disabled (cost control — ~$5/month per image if enabled).
-3. Build and push the image to Artifact Registry (`us-central1`, repository `pf-rates`) tagged with the commit SHA and `latest`.
+3. Load the image artifact and push it to Artifact Registry (`us-central1`, repository `pf-rates`) tagged with the commit SHA and `latest`.
 4. Deploy a Cloud Run **Job** (`pf-rates-migrate`) that runs `alembic upgrade head` and waits for it to succeed before any traffic is shifted.
 5. Deploy the Cloud Run **Service** (`pf-rates`) with the new image.
 

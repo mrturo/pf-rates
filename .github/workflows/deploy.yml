@@ -117,10 +117,10 @@ permissions:
 
 jobs:
   # ------------------------------------------------------------------
-  # test: lint, unit+integration tests, Docker build, Trivy scan
+  # test: lint, static analysis, unit + integration tests
   # ------------------------------------------------------------------
   test:
-    name: Test & Scan
+    name: Test & Lint
     runs-on: ubuntu-latest
 
     steps:
@@ -157,11 +157,25 @@ jobs:
       - name: Run tests with coverage
         run: make test-cov
 
-      # Build image locally so Trivy can scan it without pushing first.
-      # The image is NOT pushed in this step.
+  # ------------------------------------------------------------------
+  # build: Docker image build, Trivy security scan, release artifact
+  # Runs on every push/PR so security findings surface early.
+  # The release artifact (tagged for AR) is only produced on push to main.
+  # ------------------------------------------------------------------
+  build:
+    name: Build & Scan
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # Build image locally so Trivy can scan it without pushing first.
+      # The image is NOT pushed in this step.
       - name: Build Docker image for scanning
         uses: docker/build-push-action@v6
         with:
@@ -219,19 +233,48 @@ jobs:
             --ignore-unfixed \
             --exit-code 1
 
+      # Tag and package the release artifact — only needed when deploying.
+      # On pull requests, Trivy already ran above; no artifact is produced.
+      - name: Tag image for Artifact Registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          docker tag pf-rates:scan \
+            ${{ env.REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          docker tag pf-rates:scan \
+            ${{ env.REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.SERVICE_NAME }}:latest
+
+      - name: Export release image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          docker save \
+            ${{ env.REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+            ${{ env.REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.SERVICE_NAME }}:latest \
+            -o /tmp/pf-rates-release.tar
+
+      - name: Upload release image artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-release-${{ github.sha }}
+          path: /tmp/pf-rates-release.tar
+          retention-days: 1
+
   # ------------------------------------------------------------------
-  # deploy: build, push, migrate, deploy (only on push to main)
+  # deploy: push image to AR, migrate, deploy (only on push to main)
   # ------------------------------------------------------------------
   deploy:
     name: Deploy to Cloud Run
     runs-on: ubuntu-latest
-    needs: test
+    needs: build
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment: GCP
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Download release image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-release-${{ github.sha }}
+          path: /tmp
 
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
@@ -271,20 +314,11 @@ jobs:
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push image
-        id: build
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ env.REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
-            ${{ env.REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.SERVICE_NAME }}:latest
-          cache-from: type=registry,ref=${{ env.REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.SERVICE_NAME }}:buildcache
-          cache-to: type=registry,ref=${{ env.REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.SERVICE_NAME }}:buildcache,mode=max
+      - name: Load and push image to Artifact Registry
+        run: |
+          docker load -i /tmp/pf-rates-release.tar
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.SERVICE_NAME }}:latest
 
       # Run Alembic migrations via a Cloud Run Job BEFORE the new service
       # revision receives traffic. --wait makes the step fail if migrations fail.
