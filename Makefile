@@ -163,7 +163,7 @@ run:
 # Scans filesystem for misconfigurations and secrets (no network DB required).
 # Vulnerability scanning is handled by trivy image in the CI build job.
 security-scan:
-	trivy fs --scanners misconfig,secret --severity HIGH,CRITICAL --skip-files '.env' .
+	trivy fs --scanners misconfig,secret --severity HIGH,CRITICAL --exit-code 1 --skip-files '.env' --skip-version-check .
 
 # Runs the complete test suite.
 test:
