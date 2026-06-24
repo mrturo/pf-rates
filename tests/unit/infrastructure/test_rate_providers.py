@@ -124,21 +124,14 @@ async def test_mindicador_rate_provider_returns_none_on_invalid_payload() -> Non
     assert await provider.fetch_rate_entries("USD", []) == []
 
 
-async def test_mindicador_rate_provider_fetch_rate_is_exact_match_only() -> None:
-    """fetch_rate returns None for dates not published in the series.
+async def test_mindicador_rate_provider_is_exact_match_only() -> None:
+    """Both fetch_rate and fetch_rate_entries return only published dates.
 
-    fetch_rate no longer uses carry-forward semantics so that callers like the
-    on-demand /value endpoint don't receive stale values for unpublished dates.
-    fetch_rate_entries preserves carry-forward for bulk sync operations.
+    Neither method uses carry-forward semantics so no stale values are ever
+    returned or cached for dates CMF has not yet published.
     """
 
     def fetcher(url: str, timeout: int) -> str:
-        if url.endswith("/dolar/2025"):
-            return """
-            {"serie":[
-              {"fecha":"2025-12-31T03:00:00.000Z","valor":950.12}
-            ]}
-            """
         if url.endswith("/dolar/2026"):
             return """
             {"serie":[
@@ -149,32 +142,18 @@ async def test_mindicador_rate_provider_fetch_rate_is_exact_match_only() -> None
 
     provider = MindicadorRateProvider(fetcher=fetcher)
 
-    # 2026-01-01 is not in the 2026 series → None (no carry-forward in fetch_rate)
+    # Not in series → None
     assert await provider.fetch_rate("USD", date(2026, 1, 1)) is None
-    # 2026-01-02 is in the series → exact match
+    assert await provider.fetch_rate("USD", date(2026, 1, 3)) is None
+    # Exact match
     assert await provider.fetch_rate("USD", date(2026, 1, 2)) == Decimal("960.34")
-    # fetch_rate_entries still carries forward for bulk sync use
+    # fetch_rate_entries: only returns dates present in the series
     assert await provider.fetch_rate_entries(
-        "USD", [date(2026, 1, 1), date(2026, 1, 2)]
+        "USD", [date(2026, 1, 1), date(2026, 1, 2), date(2026, 1, 3)]
     ) == [
         ExchangeRateWriteDTO(
             currency_code="USD",
-            rate_date=date(2026, 1, 1),
-            value_clp=Decimal("950.12"),
-            source="mindicador",
-        ),
-        ExchangeRateWriteDTO(
-            currency_code="USD",
             rate_date=date(2026, 1, 2),
-            value_clp=Decimal("960.34"),
-            source="mindicador",
-        ),
-    ]
-    # Within-year carry-forward: 2026-01-03 not in series, carries 2026-01-02 value
-    assert await provider.fetch_rate_entries("USD", [date(2026, 1, 3)]) == [
-        ExchangeRateWriteDTO(
-            currency_code="USD",
-            rate_date=date(2026, 1, 3),
             value_clp=Decimal("960.34"),
             source="mindicador",
         ),

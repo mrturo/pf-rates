@@ -449,37 +449,11 @@ class MindicadorRateProvider(_FetchRateEntryMixin):
         self._series_cache[cache_key] = parsed_series
         return parsed_series
 
-    async def _get_latest_value_on_or_before(
-        self, indicator: str, on: date
-    ) -> Decimal | None:
-        """Get the latest available value on or before the requested date."""
-        series = await self._get_year_series(indicator, on.year)
-        matching_dates = [
-            series_date for series_date in sorted(series) if series_date <= on
-        ]
-        if matching_dates:
-            return series[matching_dates[-1]]
-
-        previous_year_series = await self._get_year_series(indicator, on.year - 1)
-        previous_year_dates = [
-            series_date
-            for series_date in previous_year_series
-            if series_date.year == on.year - 1
-        ]
-        if not previous_year_dates:
-            return None
-        latest_previous_year_date = max(previous_year_dates)
-        return previous_year_series[latest_previous_year_date]
-
     async def fetch_rate(self, currency_code: str, on: date) -> Decimal | None:
-        """Handle fetch rate.
+        """Return the value published for the exact requested date, or None.
 
-        Returns only the value published for the exact requested date.
-        Carry-forward (latest-on-or-before) is intentionally NOT used here so
-        that callers such as the on-demand /value endpoint do not receive or
-        cache stale values for dates that CMF has not yet published.
-        Bulk sync operations use fetch_rate_entries, which preserves carry-forward
-        semantics for filling contiguous date ranges.
+        Carry-forward is intentionally avoided so callers never receive or cache
+        stale values for dates that CMF has not yet published.
         """
         indicator = self._CODE_MAP.get(currency_code.upper())
         if indicator is None:
@@ -490,7 +464,11 @@ class MindicadorRateProvider(_FetchRateEntryMixin):
     async def fetch_rate_entries(
         self, currency_code: str, requested_dates: list[date]
     ) -> list[ExchangeRateWriteDTO]:
-        """Handle fetch rate entries."""
+        """Return entries only for dates that are explicitly published in the series.
+
+        Carry-forward is intentionally avoided so the sync job never stores
+        stale values for dates that CMF has not yet published.
+        """
         indicator = self._CODE_MAP.get(currency_code.upper())
         if indicator is None:
             return []
@@ -498,30 +476,12 @@ class MindicadorRateProvider(_FetchRateEntryMixin):
         entries_by_date: dict[date, ExchangeRateWriteDTO] = {}
         for year, year_dates in _group_dates_by_year(requested_dates).items():
             series = await self._get_year_series(indicator, year)
-            current_value: Decimal | None = None
-            if year_dates and series:
-                # Only seed carry-forward from the previous year when this year
-                # has at least some published data.  An empty series means the
-                # year is entirely unpublished; using a cross-year carry-forward
-                # would silently store stale values for future dates.
-                first_requested_date = min(year_dates)
-                current_value = await self._get_latest_value_on_or_before(
-                    indicator, first_requested_date
-                )
-            published_dates = sorted(series)
-            published_index = 0
-            for requested_date in sorted(year_dates):
-                while (
-                    published_index < len(published_dates)
-                    and published_dates[published_index] <= requested_date
-                ):
-                    current_value = series[published_dates[published_index]]
-                    published_index += 1
-                if current_value is None:
-                    continue
-                entries_by_date[requested_date] = _build_exchange_rate_entry(
-                    currency_code, requested_date, current_value, self.name
-                )
+            for requested_date in year_dates:
+                value = series.get(requested_date)
+                if value is not None:
+                    entries_by_date[requested_date] = _build_exchange_rate_entry(
+                        currency_code, requested_date, value, self.name
+                    )
 
         return _ordered_entries(entries_by_date, requested_dates)
 
