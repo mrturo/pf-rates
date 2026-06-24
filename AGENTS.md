@@ -2,8 +2,6 @@
 
 Dedicated microservice for Chilean financial reference data: exchange rates, economic indices, and income tax brackets.
 
----
-
 ## Architecture
 
 Four layers; dependency flows inward only (interfaces → application → domain; infrastructure → application).
@@ -16,163 +14,125 @@ infrastructure/  # SQLAlchemy, rate providers (adapters out)
 shared/          # Cross-cutting constants
 ```
 
-**Key rules:**
 - `domain/` has zero external dependencies — pure Python only
 - Ports (`application/ports/`) are `typing.Protocol` classes — never import concrete infrastructure types in the application layer
-- Use cases are `@dataclass(slots=True)` classes whose `__init__` accepts port protocols; injected at the interface layer via `interfaces/api/dependencies.py`
+- Use cases are `@dataclass(slots=True)` with port protocols injected via `interfaces/api/dependencies.py`
 - DTOs (`application/dto.py`) are the only data crossing layer boundaries
 
 ## Financial precision
 
-- **Always use `Decimal`, never `float`** for any monetary or rate value
-- PostgreSQL columns for money/rates use `NUMERIC`, never `FLOAT`
+- Always use `Decimal`, never `float` for monetary/rate values
+- PostgreSQL columns use `NUMERIC`, never `FLOAT`
 - Quantization helpers: `quantize_clp()` and `quantize_utm()` in `domain/quantizers.py`
 
 ## Language policy
 
-- All code, identifiers, comments, docstrings, and files must be in **English**
-- Exception: preserve official domain/regulatory terms (e.g., Chilean law names), source literals, and seed values in their original language only when translation would alter meaning — surrounding code and docs stay English
+- All code, identifiers, comments, docstrings, and files: English
+- Exception: preserve official Chilean regulatory terms/source literals/seed values in original language only when translation alters meaning
 
 ## Code style
 
-- PEP 8 + PEP 257 enforced via ruff (`extend-select = ["D", "E", "W", "UP"]`, `convention = "pep257"`)
-- Docstrings are required for **public** modules, classes, and functions only; internal helpers use minimal inline comments
-- PEPs in force: 484 (types/mypy), 544 (Protocols for ports), 585 (built-in generics `list[X]`), 604 (`X | None` unions), 498 (f-strings), 492 (async/await), 621 (pyproject.toml)
-- Domain dataclasses use `@dataclass(slots=True)`; frozen value objects add `frozen=True`
-- Async throughout: all repository and use-case methods are `async def`
-- structlog for all logging (`infrastructure/logging/logger.py`) — never use `print` or stdlib `logging` directly
+- ruff: `extend-select = ["D", "E", "W", "UP"]`, `pep257` convention
+- Docstrings required for all modules, classes, and functions only
+- PEPs: 484 (mypy), 544 (Protocols), 585 (`list[X]`), 604 (`X | None`), 498 (f-strings), 492 (async/await)
+- Domain dataclasses: `@dataclass(slots=True)`; frozen value objects add `frozen=True`
+- Async throughout; structlog only (`infrastructure/logging/logger.py`) — never `print` or stdlib `logging`
 
 ## Design principles
 
 - Apply DRY, SOLID, Clean Code — avoid god objects; prefer small, focused classes
-- Extract repeated constants, mappings, and literals to `shared/`; zero tolerance for duplication in `src/` or `tests/`
-- Thin interface layers (HTTP): orchestration logic belongs in use cases, not routes
-- Validations must be explicit and placed close to layer boundaries or domain rules
-- Never use `assert` for production validation; raise explicit errors from `application/errors.py`
+- Extract constants/mappings/literals to `shared/`; zero duplication in `src/` or `tests/`
+- Orchestration logic belongs in use cases, not routes
+- Never `assert` for production validation; raise from `application/errors.py`
 - No silent fallbacks
 
 ## Development commands
 
 ```bash
-# Local stack
 make local-up              # start DB, write .env, start Adminer, install deps, run API
 make db-up                 # start/reuse PostgreSQL (Rancher Desktop)
 make env-write             # regenerate .env with default local DB values
-
-# Validation (run before every commit)
 make check                 # lint → dead-code → typecheck → dup-check → test → test-cov
-
-# Individual steps
-make lint                  # ruff auto-fix + validate
-make dead-code             # vulture (unused production code in src/)
-make typecheck             # mypy
-make duplicate-code-src    # jscpd (1% threshold)
-make duplicate-code-tests  # jscpd (10% threshold)
-make test                  # pytest
-make test-cov              # pytest with 100% coverage enforcement
+# Individual: make lint | dead-code | typecheck | duplicate-code-src | duplicate-code-tests | test | test-cov
 ```
 
-Run with virtualenv active (`source .venv/bin/activate && make check`) or inline (`PATH=.venv/bin:$PATH make check`).
+Run: `source .venv/bin/activate && make check` or `PATH=.venv/bin:$PATH make check`.
 
 ## Testing conventions
 
-**Test location:**
-- `tests/unit/` — pure unit tests; no database, no network
-- `tests/integration/` — live PostgreSQL via testcontainers; uses `AsyncClient`
-
-**Stub pattern (no Mock library):**
-Write hand-rolled stub classes per test file. Do not use `unittest.mock.Mock` or `MagicMock`. See `tests/unit/application/test_refresh_rates.py` for the canonical pattern:
+- `tests/unit/` — no DB, no network; `tests/integration/` — live PostgreSQL via testcontainers
+- No Mock library. Hand-rolled stubs per test file. See `tests/unit/application/test_refresh_rates.py`:
 
 ```python
 class StubMarketDataRepository:
     def __init__(self) -> None:
         self.saved: list[object] = []
-
     async def save(self, items):
         self.saved = items
         return RefreshRatesResultDTO(...)
 ```
 
-**Shared fixtures** go in `tests/conftest.py`.
-
-**Assertion quality:** tests must verify meaningful outputs (return values, state, error messages). Avoid assertions that only confirm a method was called.
-
-**Async tests:** `asyncio_mode = "auto"` is set in `pyproject.toml` — do **not** add `@pytest.mark.asyncio`.
-
-**Coverage:** `src/` requires 100% coverage — every new code path needs a test.
+- Shared fixtures in `tests/conftest.py`
+- Verify meaningful outputs (return values, state, errors) — not just that methods were called
+- `asyncio_mode = "auto"` in `pyproject.toml` — do not add `@pytest.mark.asyncio`
+- 100% coverage required for `src/`
 
 ## Adding a new use case
 
-1. Define or extend a port in `application/ports/` using `Protocol`
-2. Create the use case class in `application/use_cases/` — constructor takes port interfaces only
+1. Define/extend a port in `application/ports/` using `Protocol`
+2. Create use case in `application/use_cases/` — constructor takes port interfaces only
 3. Add DTOs to `application/dto.py`
-4. Wire the dependency in `interfaces/api/dependencies.py`
-5. Add a route in `interfaces/api/routes/`
-6. Add a stub-based unit test in `tests/unit/application/`
-7. Run `make check` — it must pass clean
+4. Wire dependency in `interfaces/api/dependencies.py`
+5. Add route in `interfaces/api/routes/`
+6. Add stub-based unit test in `tests/unit/application/`
+7. `make check` must pass clean
 
 ## CI/CD pipeline
 
-The pipeline lives in `.github/workflows/deploy.yml`. It has six jobs:
+`.github/workflows/deploy.yml` — six jobs:
 
-- **`test`** — triggered on every PR and push to `main`. Runs lint, static analysis (vulture, mypy, jscpd), and pytest with coverage. No Docker.
-- **`build`** — triggered on every PR and push to `main` (needs: `test`). Builds the Docker image locally, exports it to a tar file, and runs **Trivy** in two passes: SARIF upload to GitHub Security (exit 0) and a blocking gate on unfixed CRITICAL/HIGH CVEs (exit 1). On push to `main` only: tags the image for Artifact Registry and uploads it as a GitHub Actions artifact (expires after 1 day).
-- **`gate`** — triggered only on push to `main` (needs: `build`). Pauses for manual approval via the `production` GitHub environment (configure required reviewers in Settings → Environments). Rejecting or cancelling the workflow does not send any notification.
-- **`deploy`** — triggered only on push to `main` via the `GCP` GitHub environment (needs: `gate`). Authenticates to GCP, asserts AR scanning is disabled, loads the image artifact and pushes it to Artifact Registry, runs Alembic migrations as a Cloud Run Job with `--wait`, then deploys the Cloud Run Service.
-- **`notify-failure`** — runs after any job failure on push to `main`. Sends a failure email via SMTP. Does not fire on cancellation or gate rejection (uses explicit result checks, not `failure()`, to avoid transitive failure detection).
-- **`notify-success`** — runs after a successful full deploy on push to `main`. Sends a confirmation email via SMTP.
+| Job | Trigger | Action |
+|---|---|---|
+| `test` | PR + push `main` | lint, vulture, mypy, jscpd, pytest+coverage |
+| `build` | PR + push `main` | Docker build, Trivy scan (SARIF + blocking gate on CRITICAL/HIGH) |
+| `gate` | push `main` | manual approval via `production` environment |
+| `deploy` | push `main` | push image to AR, run Alembic migration job, deploy Cloud Run |
+| `notify-failure` | any job failure on `main` | SMTP failure email |
+| `notify-success` | successful deploy | SMTP success email |
 
-**Non-negotiable invariants when editing the pipeline:**
+Pipeline invariants (never violate):
 
-1. **Migrations run before traffic.** The `pf-rates-migrate` Cloud Run Job executes `alembic upgrade head` with `--wait` and `--max-retries=0`. Do not route traffic to a new revision until this job completes successfully.
-2. **DB URL only from Secret Manager.** `FINANCIAL_DATA_DATABASE_URL` is injected via `--set-secrets`, never `--set-env-vars`. Do not add it to environment variables.
-3. **AR vulnerability scanning must stay disabled.** The deploy step checks `vulnerabilityScanningConfig.enablementConfig` and blocks if `ENABLED`. Enabling it incurs ~$5/month per image. The pipeline uses Trivy instead.
-4. **Scale-to-zero is intentional.** `--min-instances=0` keeps compute cost at zero at rest. Do not change this without explicit approval.
-5. **Image tagged with `github.sha` and `latest`.** Both tags are pushed. The migration job and service deploy reference the SHA tag — do not replace it with `latest` alone (immutability).
-6. **Non-root container.** The Dockerfile creates and switches to `appuser` in the final stage. Do not run as root.
-7. **Multi-stage Docker build.** The builder stage installs deps; the final stage copies only the venv and `alembic/`. Do not add `COPY src ./src` to the final stage — the package is already installed in the venv.
+1. Migrations before traffic — `pf-rates-migrate` Cloud Run Job runs `alembic upgrade head --wait --max-retries=0`
+2. DB URL via `--set-secrets` only — never `--set-env-vars`
+3. AR scanning stays disabled — pipeline uses Trivy (~$5/month if enabled)
+4. `--min-instances=0` — intentional scale-to-zero; do not change without approval
+5. Image tagged with both `github.sha` and `latest` — deploy references SHA, not `latest`
+6. Non-root container — Dockerfile switches to `appuser` in final stage
+7. Multi-stage build — final stage copies only venv + `alembic/`; do not add `COPY src ./src`
 
-**GitHub Secrets used by the pipeline:**
+GitHub Secrets:
 
-| Secret | Where used |
-| --- | --- |
-| `GCP_SA_KEY` | `google-github-actions/auth` (deploy job) |
-| `GCP_PROJECT_ID` | `setup-gcloud`, image tags, IAM references |
-| `FINANCIAL_DATA_DATABASE_URL` | Injected into Cloud Run migration job and service via `--set-secrets` at runtime |
-| `FINANCIAL_DATA_API_KEY` | Injected into Cloud Run migration job and service via `--set-secrets` at runtime |
-| `GCP_CLOUD_SQL_INSTANCE` | Optional — adds `--set-cloudsql-instances` / `--add-cloudsql-instances` flags when non-empty |
-| `MAIL_SERVER` | SMTP server hostname for pipeline notifications (notify-failure / notify-success) |
-| `MAIL_PORT` | SMTP port (e.g. `587` for STARTTLS) |
-| `MAIL_USERNAME` | SMTP username / sender address |
-| `MAIL_PASSWORD` | SMTP password or app-specific password |
-| `MAIL_FROM` | Sender display address |
-| `MAIL_TO` | Recipient address(es), comma-separated |
+| Secret | Purpose |
+|---|---|
+| `GCP_SA_KEY` | GCP auth (deploy job) |
+| `GCP_PROJECT_ID` | image tags, IAM |
+| `FINANCIAL_DATA_DATABASE_URL` | Cloud Run `--set-secrets` |
+| `FINANCIAL_DATA_API_KEY` | Cloud Run `--set-secrets` |
+| `GCP_CLOUD_SQL_INSTANCE` | optional Cloud SQL proxy sidecar |
+| `MAIL_SERVER/PORT/USERNAME/PASSWORD/FROM/TO` | SMTP notifications |
 
-> `FINANCIAL_DATA_BCCH_API_USER` and `FINANCIAL_DATA_BCCH_API_PASSWORD` are listed in the workflow header as references but are **not currently injected** into Cloud Run steps. Add explicit `--set-secrets` entries if they are needed at runtime.
+> `FINANCIAL_DATA_BCCH_API_USER` / `BCCH_API_PASSWORD` referenced in workflow header but not injected — add `--set-secrets` if needed at runtime.
 
-**Database options (A vs B):**
+DB options: A) External — set `FINANCIAL_DATA_DATABASE_URL` → Neon/Supabase, leave `GCP_CLOUD_SQL_INSTANCE` empty. B) Cloud SQL — set `GCP_CLOUD_SQL_INSTANCE=PROJECT:us-central1:pf-rates-db`, pipeline adds proxy sidecar.
 
-- **Option A (external DB):** set `FINANCIAL_DATA_DATABASE_URL` in Secret Manager pointing to an external host (e.g. Neon, Supabase). Leave `GCP_CLOUD_SQL_INSTANCE` empty — no Cloud SQL flags are added.
-- **Option B (Cloud SQL):** set `GCP_CLOUD_SQL_INSTANCE=PROJECT:us-central1:pf-rates-db`. The pipeline adds the Cloud SQL proxy sidecar to both the migration job and the service.
-
-**Cloud Run configuration (as deployed):**
-
-- Region: `us-central1`
-- Instances: min 0, max 2
-- Memory: 512 MiB; CPU: 1
-- Port: 8080 (`PORT` injected by Cloud Run at runtime; Dockerfile defaults to 8080)
-- Runtime SA: `pf-rates@<PROJECT>.iam.gserviceaccount.com` — must hold `roles/secretmanager.secretAccessor` on the DB secret
+Cloud Run: region `us-central1`, min 0/max 2 instances, 512 MiB/1 CPU, port 8080, SA `pf-rates@<PROJECT>.iam.gserviceaccount.com` needs `roles/secretmanager.secretAccessor`.
 
 ## Versioning and operations
 
-- **SemVer** for version numbers
-- **Conventional Commits** (English) for all git messages
-- Follow 12-Factor: configuration via env vars, explicit dependencies, stateless/disposable processes, logs to stdout/stderr
-- Never autonomously execute git commits, push branches, create issues, or open PRs — each requires an explicit user command
+- SemVer; Conventional Commits (English)
+- Never autonomously commit, push branches, create issues, or open PRs — requires explicit user command
 
 ## Database
 
-- Schema: `db/01_schema.sql` (idempotent DDL — `CREATE TABLE IF NOT EXISTS`)
-- Seed: `db/02_seed_currencies.sql`
-- Migrations: Alembic (`alembic/`)
-- Connection string uses `FINANCIAL_DATA_DATABASE_URL` env var (prefix `FINANCIAL_DATA_`)
+- Schema: `db/01_schema.sql` (idempotent DDL); seed: `db/02_seed_currencies.sql`
+- Migrations: Alembic (`alembic/`); connection via `FINANCIAL_DATA_DATABASE_URL` env var
