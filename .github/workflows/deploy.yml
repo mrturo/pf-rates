@@ -172,6 +172,20 @@ jobs:
       - name: Run tests with coverage
         run: make test-cov
 
+      - name: Install Trivy
+        run: |
+          sudo apt-get install -y wget gnupg
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key \
+            | gpg --dearmor \
+            | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" \
+            | sudo tee /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update -qq
+          sudo apt-get install -y trivy
+
+      - name: Security scan (trivy fs)
+        run: make security-scan
+
   # ------------------------------------------------------------------
   # build: Docker image build, Trivy security scan, release artifact
   # Runs on every push/PR so security findings surface early.

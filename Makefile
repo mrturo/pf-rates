@@ -160,6 +160,11 @@ local-up:
 run:
 	$(VENV_BIN) uvicorn financial_data.interfaces.api.app:app --reload --port $(APP_PORT)
 
+# Scans filesystem for misconfigurations and secrets (no network DB required).
+# Vulnerability scanning is handled by trivy image in the CI build job.
+security-scan:
+	trivy fs --scanners misconfig,secret --severity HIGH,CRITICAL --skip-files '.env' .
+
 # Runs the complete test suite.
 test:
 	$(_DOCKER_ENV) $(VENV_BIN) pytest
@@ -171,7 +176,7 @@ test-cov:
 # Executes all repository quality gates in sequence.
 check:
 	@set -e; \
-	for target in lint dead-code typecheck duplicate-code-src duplicate-code-tests duplicate-code test test-cov; do \
+	for target in lint dead-code typecheck duplicate-code-src duplicate-code-tests duplicate-code test test-cov security-scan; do \
 		echo "==> make $$target"; \
 		if ! $(MAKE) --no-print-directory $$target; then \
 			echo "FAILED: $$target"; \
@@ -198,7 +203,7 @@ _duplicate-code:
 	  echo "  → Corporative VPN detected — using Artifactory npm registry"; \
 	  export npm_config_registry="$(CORPORATIVE_NPM_REGISTRY)"; \
 	fi; \
-	npx --yes jscpd --mode strict --min-lines 10 --min-tokens 70 --threshold $(DUPLICATE_THRESHOLD) --reporters console --ignore "**/.venv/**,**/build/**,**/dist/**" $(DUPLICATE_PATH)
+	npx --yes jscpd --mode strict --min-lines 10 --min-tokens 70 --threshold $(DUPLICATE_THRESHOLD) --reporters console --ignore "**/.venv/**,**/build/**,**/dist/**,**/.github/**" $(DUPLICATE_PATH)
 
 # Runs Ruff autofixes/formatting and then validates lint cleanliness.
 lint:
