@@ -91,15 +91,21 @@ class SqlAlchemyMarketDataRepository:
         return result.scalar_one_or_none()
 
     async def get_latest_exchange_rate_value_before(
-        self, code: str, before: date
+        self, code: str, before: date, on_or_after: date | None = None
     ) -> Decimal | None:
-        """Return the CLP value for the most recent rate strictly before *before*."""
+        """Return the CLP value for the most recent rate strictly before *before*.
+
+        When *on_or_after* is given the search is restricted to that window.
+        """
+        conditions = [
+            ExchangeRateModel.currency_code == code,
+            ExchangeRateModel.rate_date < before,
+        ]
+        if on_or_after is not None:
+            conditions.append(ExchangeRateModel.rate_date >= on_or_after)
         result = await self._session.execute(
             select(ExchangeRateModel.value_clp)
-            .where(
-                ExchangeRateModel.currency_code == code,
-                ExchangeRateModel.rate_date < before,
-            )
+            .where(*conditions)
             .order_by(ExchangeRateModel.rate_date.desc())
             .limit(1)
         )

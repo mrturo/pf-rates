@@ -51,9 +51,11 @@ class GetExchangeRateValue:
         # Steps 3 and 4 apply only to past/today — future dates always 404 here.
         today = datetime.now(tz=_CHILE_TZ).date()
         if rate_date <= today:
-            # 3. Nearest prior date in the database (returned as-is, not persisted).
+            # 3. Nearest prior date in the database within the lookback window
+            #    (returned as-is, not persisted).
+            window_start = rate_date - timedelta(days=_MAX_PROVIDER_LOOKBACK_DAYS)
             fallback = await self.repository.get_latest_exchange_rate_value_before(
-                currency_code, rate_date
+                currency_code, rate_date, on_or_after=window_start
             )
             if fallback is not None:
                 return fallback

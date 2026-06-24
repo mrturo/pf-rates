@@ -30,9 +30,13 @@ class MarketDataRepository(Protocol):
         ...
 
     async def get_latest_exchange_rate_value_before(
-        self, code: str, before: date
+        self, code: str, before: date, on_or_after: date | None = None
     ) -> Decimal | None:
-        """Return the CLP value for the most recent rate strictly before *before*."""
+        """Return the CLP value for the most recent rate strictly before *before*.
+
+        When *on_or_after* is given the search is restricted to that window,
+        so callers can enforce a maximum lookback horizon.
+        """
         ...
 
     async def list_exchange_rate_dates(

@@ -184,6 +184,12 @@ async def test_get_latest_exchange_rate_value_before(
     result = await repo.get_latest_exchange_rate_value_before("USD", date(2026, 3, 15))
     assert result == Decimal("970.000000")
 
+    # on_or_after window that excludes 2026-03-10 → None
+    result_windowed = await repo.get_latest_exchange_rate_value_before(
+        "USD", date(2026, 3, 15), on_or_after=date(2026, 3, 12)
+    )
+    assert result_windowed is None
+
     # Date in the distant past: no USD rates stored before 2020 in any test → None
     result_none = await repo.get_latest_exchange_rate_value_before(
         "USD", date(2020, 1, 1)

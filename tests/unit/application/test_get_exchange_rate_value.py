@@ -51,7 +51,7 @@ class _StubRepository:
         return self._db_value
 
     async def get_latest_exchange_rate_value_before(
-        self, code: str, before: date
+        self, code: str, before: date, on_or_after: date | None = None
     ) -> Decimal | None:
         """Return preconfigured fallback value."""
         return self._fallback_value
