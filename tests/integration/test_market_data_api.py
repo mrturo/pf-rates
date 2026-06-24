@@ -151,6 +151,46 @@ async def test_get_exchange_rate_value_found_and_not_found(
     assert missing.status_code == 404
 
 
+async def test_get_latest_exchange_rate_value_before(
+    db_session: AsyncSession,
+) -> None:
+    """get_latest_exchange_rate_value_before returns the nearest prior stored rate."""
+    from financial_data.application.dto import (
+        ExchangeRateWriteDTO,
+        RefreshRatesCommandDTO,
+    )
+
+    repo = SqlAlchemyMarketDataRepository(db_session)
+    await repo.refresh_rates(
+        RefreshRatesCommandDTO(
+            exchange_rates=[
+                ExchangeRateWriteDTO(
+                    currency_code="USD",
+                    rate_date=date(2026, 3, 10),
+                    value_clp=Decimal("970.00"),
+                    source="test",
+                ),
+                ExchangeRateWriteDTO(
+                    currency_code="USD",
+                    rate_date=date(2026, 3, 15),
+                    value_clp=Decimal("980.00"),
+                    source="test",
+                ),
+            ]
+        )
+    )
+
+    # Strictly before 2026-03-15 → picks the closest prior (2026-03-10)
+    result = await repo.get_latest_exchange_rate_value_before("USD", date(2026, 3, 15))
+    assert result == Decimal("970.000000")
+
+    # Date in the distant past: no USD rates stored before 2020 in any test → None
+    result_none = await repo.get_latest_exchange_rate_value_before(
+        "USD", date(2020, 1, 1)
+    )
+    assert result_none is None
+
+
 async def test_refresh_exchange_rates_rejects_unknown_currency(
     http_client: AsyncClient,
 ) -> None:

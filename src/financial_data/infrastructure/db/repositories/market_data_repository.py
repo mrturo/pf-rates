@@ -90,6 +90,21 @@ class SqlAlchemyMarketDataRepository:
         )
         return result.scalar_one_or_none()
 
+    async def get_latest_exchange_rate_value_before(
+        self, code: str, before: date
+    ) -> Decimal | None:
+        """Return the CLP value for the most recent rate strictly before *before*."""
+        result = await self._session.execute(
+            select(ExchangeRateModel.value_clp)
+            .where(
+                ExchangeRateModel.currency_code == code,
+                ExchangeRateModel.rate_date < before,
+            )
+            .order_by(ExchangeRateModel.rate_date.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
     async def list_exchange_rate_dates(
         self, code: str, start: date, end: date
     ) -> list[date]:

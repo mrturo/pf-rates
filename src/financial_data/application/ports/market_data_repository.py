@@ -29,6 +29,12 @@ class MarketDataRepository(Protocol):
         """Return the CLP value for a currency on the given date, or None."""
         ...
 
+    async def get_latest_exchange_rate_value_before(
+        self, code: str, before: date
+    ) -> Decimal | None:
+        """Return the CLP value for the most recent rate strictly before *before*."""
+        ...
+
     async def list_exchange_rate_dates(
         self, code: str, start: date, end: date
     ) -> list[date]:
