@@ -40,36 +40,36 @@ _DOCKER_ENV = $(if $(wildcard $(_RANCHER_SOCK)),DOCKER_HOST=unix://$(_RANCHER_SO
 # Creates the local virtual environment and installs project dependencies.
 install:
 	@python_bin=$$(for v in python3.14 python3.13 python3.12 python3; do \
-	  if command -v "$$v" >/dev/null 2>&1 && "$$v" -c "import sys; sys.exit(0 if sys.version_info>=(3,12) else 1)" 2>/dev/null; then \
-	    echo "$$v"; break; \
-	  fi; \
+		if command -v "$$v" >/dev/null 2>&1 && "$$v" -c "import sys; sys.exit(0 if sys.version_info>=(3,12) else 1)" 2>/dev/null; then \
+			echo "$$v"; break; \
+		fi; \
 	done); \
 	[ -n "$$python_bin" ] || { \
-	  echo ""; \
-	  echo "ERROR: Python >=3.12 not found in PATH."; \
-	  echo ""; \
-	  echo "  Option 1 — pyenv (recommended if already installed):"; \
-	  echo "    pyenv install 3.12 && pyenv local 3.12"; \
-	  echo ""; \
-	  echo "  Option 2 — install pyenv without brew (works on Corporative VPN):"; \
-	  echo "    curl -fsSL https://pyenv.run | bash"; \
-	  echo "    # then add to your shell profile and restart terminal"; \
-	  echo "    pyenv install 3.12 && pyenv local 3.12"; \
-	  echo ""; \
-	  echo "  Option 3 — download installer from https://www.python.org/downloads/"; \
-	  echo ""; \
-	  echo "  Then re-run: make reinstall"; \
-	  echo ""; \
-	  exit 1; \
+		echo ""; \
+		echo "ERROR: Python >=3.12 not found in PATH."; \
+		echo ""; \
+		echo "  Option 1 — pyenv (recommended if already installed):"; \
+		echo "    pyenv install 3.12 && pyenv local 3.12"; \
+		echo ""; \
+		echo "  Option 2 — install pyenv without brew (works on Corporative VPN):"; \
+		echo "    curl -fsSL https://pyenv.run | bash"; \
+		echo "    # then add to your shell profile and restart terminal"; \
+		echo "    pyenv install 3.12 && pyenv local 3.12"; \
+		echo ""; \
+		echo "  Option 3 — download installer from https://www.python.org/downloads/"; \
+		echo ""; \
+		echo "  Then re-run: make reinstall"; \
+		echo ""; \
+		exit 1; \
 	}; \
 	echo "  → Using $$python_bin ($$($$python_bin --version))"; \
 	"$$python_bin" -m venv "$(VENV)"
 	@if curl -sfL --connect-timeout 3 -o /dev/null "$(CORPORATIVE_PIP_INDEX)/" 2>/dev/null; then \
-	  echo "  → Corporative VPN — routing pip through sysproxy"; \
-	  printf '[global]\nproxy = $(CORPORATIVE_PROXY)\n' > "$(VENV)/pip.conf"; \
+		echo "  → Corporative VPN — routing pip through sysproxy"; \
+		printf '[global]\nproxy = $(CORPORATIVE_PROXY)\n' > "$(VENV)/pip.conf"; \
 	else \
-	  echo "  → No VPN — disabling corporate proxy env vars for pip"; \
-	  printf '[global]\ntrust-env = false\n' > "$(VENV)/pip.conf"; \
+		echo "  → No VPN — disabling corporate proxy env vars for pip"; \
+		printf '[global]\ntrust-env = false\n' > "$(VENV)/pip.conf"; \
 	fi
 	. "$(VENV)/bin/activate" && python -m pip install -U pip && python -m pip install -e ".[dev]"
 	git config core.hooksPath .githooks
@@ -152,11 +152,11 @@ unset-proxy-vars:
 # Brings up the full local stack (DB, Adminer, env, deps, and API).
 local-up:
 	$(DB_ENV) $(ADMINER_ENV) \
-	  APP_PORT="$(APP_PORT)" \
-	  VENV="$(VENV)" ENV_FILE="$(ENV_FILE)" \
-	  CORPORATIVE_PIP_INDEX="$(CORPORATIVE_PIP_INDEX)" \
-	  CORPORATIVE_NPM_REGISTRY="$(CORPORATIVE_NPM_REGISTRY)" \
-	  ./scripts/local_stack.sh
+		APP_PORT="$(APP_PORT)" \
+		VENV="$(VENV)" ENV_FILE="$(ENV_FILE)" \
+		CORPORATIVE_PIP_INDEX="$(CORPORATIVE_PIP_INDEX)" \
+		CORPORATIVE_NPM_REGISTRY="$(CORPORATIVE_NPM_REGISTRY)" \
+		./scripts/local_stack.sh
 
 # Runs the FastAPI server in development mode with auto-reload.
 run:
@@ -202,8 +202,8 @@ duplicate-code-src:
 # Runs jscpd with configurable path and threshold.
 _duplicate-code:
 	@if curl -sfL --connect-timeout 2 -o /dev/null "$(CORPORATIVE_NPM_REGISTRY)/" 2>/dev/null; then \
-	  echo "  → Corporative VPN detected — using Artifactory npm registry"; \
-	  export npm_config_registry="$(CORPORATIVE_NPM_REGISTRY)"; \
+		echo "  → Corporative VPN detected — using Artifactory npm registry"; \
+		export npm_config_registry="$(CORPORATIVE_NPM_REGISTRY)"; \
 	fi; \
 	npx --yes jscpd --mode strict --min-lines 10 --min-tokens 70 --threshold $(DUPLICATE_THRESHOLD) --reporters console --ignore "**/.venv/**,**/build/**,**/dist/**,**/.github/**" $(DUPLICATE_PATH)
 
@@ -224,20 +224,20 @@ typecheck:
 # Installs Python 3.12 via pyenv (installs pyenv first if not found). Works on Corporative VPN.
 install-python:
 	@if command -v pyenv >/dev/null 2>&1; then \
-	  echo "  → pyenv found, installing Python 3.12..."; \
-	  pyenv install -s 3.12; \
-	  pyenv local 3.12; \
-	  echo "  ✓ Python 3.12 ready. Re-run: make reinstall"; \
+		echo "  → pyenv found, installing Python 3.12..."; \
+		pyenv install -s 3.12; \
+		pyenv local 3.12; \
+		echo "  ✓ Python 3.12 ready. Re-run: make reinstall"; \
 	else \
-	  echo "  → pyenv not found, installing via https://pyenv.run ..."; \
-	  curl -fsSL https://pyenv.run | bash; \
-	  echo ""; \
-	  echo "  ✓ pyenv installed. Add the following to your shell profile (~/.zshrc or ~/.bashrc),"; \
-	  echo "    restart your terminal, then run: make install-python"; \
-	  echo ""; \
-	  echo '    export PYENV_ROOT="$$HOME/.pyenv"'; \
-	  echo '    export PATH="$$PYENV_ROOT/bin:$$PATH"'; \
-	  echo '    eval "$$(pyenv init -)"'; \
+		echo "  → pyenv not found, installing via https://pyenv.run ..."; \
+		curl -fsSL https://pyenv.run | bash; \
+		echo ""; \
+		echo "  ✓ pyenv installed. Add the following to your shell profile (~/.zshrc or ~/.bashrc),"; \
+		echo "    restart your terminal, then run: make install-python"; \
+		echo ""; \
+		echo '    export PYENV_ROOT="$$HOME/.pyenv"'; \
+		echo '    export PATH="$$PYENV_ROOT/bin:$$PATH"'; \
+		echo '    eval "$$(pyenv init -)"'; \
 	fi
 
 # Removes local caches, build artifacts, and generated output files.
