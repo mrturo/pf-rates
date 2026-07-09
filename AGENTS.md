@@ -142,7 +142,7 @@ Cloud Run: region `us-central1`, min 0/max 2 instances, 512 MiB/1 CPU, port 8080
 Schema and migrations are owned by **[pf-db](../pf-db)** — a separate repository.
 pf-rates only holds SQLAlchemy ORM models and repositories.
 
-- **Connection**: `FINANCIAL_DATA_DATABASE_URL` env var (default local: `postgresql+asyncpg://pf:pf@localhost:5432/pf`)
+- **Connection**: `FINANCIAL_DATA_DATABASE_URL` env var (default local: `postgresql+asyncpg://pf_db:pf_db@localhost:5432/pf_db`)
 - **Sessions**: `infrastructure/db/session.py` — always use `async with SessionLocal() as session`
 - **Repositories**: implement port `Protocol`s; live in `infrastructure/db/repositories/`
 - **ORM models**: `infrastructure/db/models/financial_data.py`

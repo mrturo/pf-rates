@@ -12,9 +12,9 @@ NERDCTL ?= $(shell nerdctl info >/dev/null 2>&1 && echo "nerdctl" || echo "nerdc
 # Database is now managed by pf-db (shared with pf-payroll).
 # Run `make db-up` in the pf-db repo to start the database.
 DB_CONTAINER ?= pf-db-db-1
-DB_NAME ?= pf
-DB_USER ?= pf
-DB_PASSWORD ?= pf
+DB_NAME ?= pf_db
+DB_USER ?= pf_db
+DB_PASSWORD ?= pf_db
 DB_PORT ?= 5432
 ADMINER_CONTAINER ?= pf-rates-adminer
 ADMINER_PORT ?= 8090
