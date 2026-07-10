@@ -142,13 +142,14 @@ jobs:
 
       # pf-db is checked out as a sibling (_pf-db/) so conftest.py can read the
       # SQL test fixtures (schema + seed) without duplicating them in this repo.
-      # Requires GH_PAT secret if pf-db is a private repository.
+      # Falls back to github.token (works for public repos). If pf-db is private,
+      # create a GH_PAT secret with repo read scope on mrturo/pf-db.
       - name: Checkout pf-db (SQL test fixtures)
         uses: actions/checkout@v7
         with:
           repository: mrturo/pf-db
           path: _pf-db
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Lint (ruff)
         run: |
