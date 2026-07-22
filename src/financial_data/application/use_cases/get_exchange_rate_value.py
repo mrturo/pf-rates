@@ -1,6 +1,5 @@
 """Use case for retrieving an exchange rate value with external provider fallback."""
 
-from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from zoneinfo import ZoneInfo
@@ -17,7 +16,6 @@ _CHILE_TZ = ZoneInfo("America/Santiago")
 _MAX_PROVIDER_LOOKBACK_DAYS = 7
 
 
-@dataclass(slots=True)
 class GetExchangeRateValue:
     """Return the CLP value for a currency on a given date.
 
@@ -30,20 +28,26 @@ class GetExchangeRateValue:
     5. Not found → ExchangeRateNotFoundError.
     """
 
-    repository: MarketDataRepository
-    provider: FxRateProvider
+    def __init__(
+        self,
+        repository: MarketDataRepository,
+        provider: FxRateProvider,
+    ) -> None:
+        """Initialize the instance."""
+        self._repository = repository
+        self._provider = provider
 
     async def execute(self, currency_code: str, rate_date: date) -> Decimal:
         """Return the exchange rate value using the five-step resolution order."""
         # 1. Exact DB hit.
-        value = await self.repository.get_exchange_rate_value(currency_code, rate_date)
+        value = await self._repository.get_exchange_rate_value(currency_code, rate_date)
         if value is not None:
             return value
 
         # 2. Provider — exact date only (no carry-forward).
-        entry = await self.provider.fetch_rate_entry(currency_code, rate_date)
+        entry = await self._provider.fetch_rate_entry(currency_code, rate_date)
         if entry is not None:
-            await self.repository.refresh_rates(
+            await self._repository.refresh_rates(
                 RefreshRatesCommandDTO(exchange_rates=[entry])
             )
             return entry.value_clp
@@ -54,7 +58,7 @@ class GetExchangeRateValue:
             # 3. Nearest prior date in the database within the lookback window
             #    (returned as-is, not persisted).
             window_start = rate_date - timedelta(days=_MAX_PROVIDER_LOOKBACK_DAYS)
-            fallback = await self.repository.get_latest_exchange_rate_value_before(
+            fallback = await self._repository.get_latest_exchange_rate_value_before(
                 currency_code, rate_date, on_or_after=window_start
             )
             if fallback is not None:
@@ -65,11 +69,11 @@ class GetExchangeRateValue:
             #    so saving under the found date is safe.
             for days_back in range(1, _MAX_PROVIDER_LOOKBACK_DAYS + 1):
                 prior_date = rate_date - timedelta(days=days_back)
-                prior_entry = await self.provider.fetch_rate_entry(
+                prior_entry = await self._provider.fetch_rate_entry(
                     currency_code, prior_date
                 )
                 if prior_entry is not None:
-                    await self.repository.refresh_rates(
+                    await self._repository.refresh_rates(
                         RefreshRatesCommandDTO(exchange_rates=[prior_entry])
                     )
                     return prior_entry.value_clp

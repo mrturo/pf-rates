@@ -223,8 +223,8 @@ def test_get_refresh_rates_use_case_builds_correctly() -> None:
     repository = SqlAlchemyMarketDataRepository(_FakeSession())  # type: ignore[arg-type]
     use_case = get_refresh_rates_use_case(repository)
     assert isinstance(use_case, RefreshRates)
-    assert use_case.fx_provider is not None
-    assert use_case.economic_index_provider is not None
+    assert use_case._fx_provider is not None
+    assert use_case._economic_index_provider is not None
 
 
 def test_get_refresh_income_tax_brackets_use_case_builds_correctly() -> None:

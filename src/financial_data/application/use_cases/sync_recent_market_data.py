@@ -2,7 +2,6 @@
 
 import dataclasses
 from collections.abc import Callable
-from dataclasses import dataclass
 from datetime import date, timedelta
 
 import structlog
@@ -36,16 +35,25 @@ _LOOKBACK_MONTHS = 12
 _FORWARD_DAYS = 35
 
 
-@dataclass(slots=True)
 class SyncRecentMarketData:
     """Sync missing recent market data entries using provider-backed fetches."""
 
-    repository: MarketDataRepository
-    fx_provider: FxRateProvider
-    economic_index_provider: EconomicIndexProvider
-    reference_repository: ReferenceDataRepository
-    bracket_provider: IncomeTaxBracketProvider
-    today_provider: Callable[[], date] = date.today
+    def __init__(
+        self,
+        repository: MarketDataRepository,
+        fx_provider: FxRateProvider,
+        economic_index_provider: EconomicIndexProvider,
+        reference_repository: ReferenceDataRepository,
+        bracket_provider: IncomeTaxBracketProvider,
+        today_provider: Callable[[], date] = date.today,
+    ) -> None:
+        """Initialize the instance."""
+        self._repository = repository
+        self._fx_provider = fx_provider
+        self._economic_index_provider = economic_index_provider
+        self._reference_repository = reference_repository
+        self._bracket_provider = bracket_provider
+        self._today_provider = today_provider
 
     async def execute(
         self,
@@ -60,7 +68,7 @@ class SyncRecentMarketData:
             forward_days: Forward window for currencies that publish future
                 values (e.g. UF). Defaults to _FORWARD_DAYS (35).
         """
-        today = self.today_provider()
+        today = self._today_provider()
         actual_lookback = lookback_days if lookback_days is not None else _LOOKBACK_DAYS
         actual_forward = forward_days if forward_days is not None else _FORWARD_DAYS
         daily_dates = self._build_daily_dates(today, actual_lookback)
@@ -158,12 +166,12 @@ class SyncRecentMarketData:
                 else daily_dates
             )
             existing_dates = set(
-                await self.repository.list_exchange_rate_dates(
+                await self._repository.list_exchange_rate_dates(
                     currency_code, requested[0], requested[-1]
                 )
             )
             same_day_dates = set(
-                await self.repository.list_unconfirmed_rate_dates(
+                await self._repository.list_unconfirmed_rate_dates(
                     currency_code, requested[0], requested[-1]
                 )
             )
@@ -174,7 +182,7 @@ class SyncRecentMarketData:
 
         for currency_code in MONTHLY_MARKET_RATE_CODES:
             existing_dates = set(
-                await self.repository.list_exchange_rate_dates(
+                await self._repository.list_exchange_rate_dates(
                     currency_code, monthly_dates[0], monthly_dates[-1]
                 )
             )
@@ -195,7 +203,7 @@ class SyncRecentMarketData:
 
         for code in MONTHLY_ECONOMIC_INDEX_CODES:
             existing_periods = set(
-                await self.repository.list_economic_index_periods(code, all_periods)
+                await self._repository.list_economic_index_periods(code, all_periods)
             )
             missing_requests[code] = [
                 period for period in all_periods if period not in existing_periods
@@ -211,7 +219,7 @@ class SyncRecentMarketData:
         for currency_code, requested_dates in requests_by_code.items():
             if not requested_dates:
                 continue
-            exchange_rates = await self.fx_provider.fetch_rate_entries(
+            exchange_rates = await self._fx_provider.fetch_rate_entries(
                 currency_code, requested_dates
             )
             if not exchange_rates:
@@ -221,7 +229,7 @@ class SyncRecentMarketData:
                     requested_count=len(requested_dates),
                 )
                 continue
-            refresh_result = await self.repository.refresh_rates(
+            refresh_result = await self._repository.refresh_rates(
                 RefreshRatesCommandDTO(exchange_rates=exchange_rates)
             )
             upserted_exchange_rates += refresh_result.upserted_exchange_rates
@@ -236,7 +244,7 @@ class SyncRecentMarketData:
             if not requested_dates:
                 continue
             existing_dates = set(
-                await self.repository.list_exchange_rate_dates(
+                await self._repository.list_exchange_rate_dates(
                     currency_code, requested_dates[0], requested_dates[-1]
                 )
             )
@@ -257,7 +265,7 @@ class SyncRecentMarketData:
         for code, requested_periods in requests_by_code.items():
             if not requested_periods:
                 continue
-            economic_indices = await self.economic_index_provider.fetch_indices(
+            economic_indices = await self._economic_index_provider.fetch_indices(
                 code, requested_periods
             )
             if not economic_indices:
@@ -267,7 +275,7 @@ class SyncRecentMarketData:
                     requested_count=len(requested_periods),
                 )
                 continue
-            refresh_result = await self.repository.refresh_rates(
+            refresh_result = await self._repository.refresh_rates(
                 RefreshRatesCommandDTO(economic_indices=economic_indices)
             )
             upserted_economic_indices += refresh_result.upserted_economic_indices
@@ -282,7 +290,7 @@ class SyncRecentMarketData:
             if not requested_periods:
                 continue
             existing_periods = set(
-                await self.repository.list_economic_index_periods(
+                await self._repository.list_economic_index_periods(
                     code, requested_periods
                 )
             )
@@ -299,17 +307,17 @@ class SyncRecentMarketData:
         """Fetch and persist income tax brackets for years not yet in the DB."""
         upserted = 0
         for year in sorted(years):
-            existing = await self.reference_repository.list_income_tax_brackets(year)
+            existing = await self._reference_repository.list_income_tax_brackets(year)
             if existing:
                 continue
-            brackets = await self.bracket_provider.fetch_income_tax_brackets(year)
+            brackets = await self._bracket_provider.fetch_income_tax_brackets(year)
             if not brackets:
                 _logger.warning(
                     "bracket_provider_returned_empty",
                     year=year,
                 )
                 continue
-            upserted += await self.reference_repository.upsert_income_tax_brackets(
+            upserted += await self._reference_repository.upsert_income_tax_brackets(
                 brackets
             )
         return upserted

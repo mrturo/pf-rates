@@ -1,7 +1,5 @@
 """Use case for refreshing rates and economic indices."""
 
-from dataclasses import dataclass
-
 from financial_data.application.errors import (
     FinancialDataDependencyConfigurationError,
     FinancialDataDependencyError,
@@ -22,13 +20,19 @@ from financial_data.application.ports.rate_provider import (
 from financial_data.application.ports.market_data_repository import MarketDataRepository
 
 
-@dataclass(slots=True)
 class RefreshRates:
     """Store historical exchange rates and economic indices."""
 
-    repository: MarketDataRepository
-    fx_provider: FxRateProvider | None = None
-    economic_index_provider: EconomicIndexProvider | None = None
+    def __init__(
+        self,
+        repository: MarketDataRepository,
+        fx_provider: FxRateProvider | None = None,
+        economic_index_provider: EconomicIndexProvider | None = None,
+    ) -> None:
+        """Initialize the instance."""
+        self._repository = repository
+        self._fx_provider = fx_provider
+        self._economic_index_provider = economic_index_provider
 
     async def execute(self, command: RefreshRatesCommandDTO) -> RefreshRatesResultDTO:
         """Handle execute."""
@@ -82,7 +86,7 @@ class RefreshRates:
 
         fetched_exchange_rates: list[ExchangeRateWriteDTO] = []
         if provider_exchange_rates:
-            fx_provider = self.fx_provider
+            fx_provider = self._fx_provider
             if fx_provider is None:
                 raise FinancialDataDependencyConfigurationError(
                     "Exchange-rate provider chain is not configured."
@@ -102,7 +106,7 @@ class RefreshRates:
 
         fetched_economic_indices: list[EconomicIndexWriteDTO] = []
         if provider_economic_indices:
-            economic_index_provider = self.economic_index_provider
+            economic_index_provider = self._economic_index_provider
             if economic_index_provider is None:
                 raise FinancialDataDependencyConfigurationError(
                     "Economic-index provider chain is not configured."
@@ -141,4 +145,4 @@ class RefreshRates:
                 }.values()
             ),
         )
-        return await self.repository.refresh_rates(normalized_command)
+        return await self._repository.refresh_rates(normalized_command)

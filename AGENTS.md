@@ -16,7 +16,7 @@ shared/          # Cross-cutting constants
 
 - `domain/` has zero external dependencies — pure Python only
 - Ports (`application/ports/`) are `typing.Protocol` classes — never import concrete infrastructure types in the application layer
-- Use cases are `@dataclass(slots=True)` with port protocols injected via `interfaces/api/dependencies.py`
+- Use cases are classes with `__init__` accepting port protocols; injected via `interfaces/api/dependencies.py`
 - DTOs (`application/dto.py`) are the only data crossing layer boundaries
 
 ## Financial precision

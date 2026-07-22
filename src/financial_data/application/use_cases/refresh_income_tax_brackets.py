@@ -1,7 +1,5 @@
 """Use case for synchronizing official monthly income tax brackets."""
 
-from dataclasses import dataclass
-
 from financial_data.application.errors import FinancialDataDependencyError
 from financial_data.application.dto import (
     RefreshIncomeTaxBracketsCommandDTO,
@@ -13,25 +11,30 @@ from financial_data.application.ports.reference_data_repository import (
 )
 
 
-@dataclass(slots=True)
 class RefreshIncomeTaxBrackets:
     """Fetch and persist official monthly income tax brackets for a given year."""
 
-    repository: ReferenceDataRepository
-    provider: IncomeTaxBracketProvider
+    def __init__(
+        self,
+        repository: ReferenceDataRepository,
+        provider: IncomeTaxBracketProvider,
+    ) -> None:
+        """Initialize the instance."""
+        self._repository = repository
+        self._provider = provider
 
     async def execute(
         self,
         command: RefreshIncomeTaxBracketsCommandDTO,
     ) -> RefreshIncomeTaxBracketsResultDTO:
         """Handle execute."""
-        brackets = await self.provider.fetch_income_tax_brackets(command.year)
+        brackets = await self._provider.fetch_income_tax_brackets(command.year)
         if not brackets:
             raise FinancialDataDependencyError(
                 f"No official income tax brackets were found for {command.year}."
             )
 
-        upserted_brackets = await self.repository.upsert_income_tax_brackets(brackets)
+        upserted_brackets = await self._repository.upsert_income_tax_brackets(brackets)
         refreshed_months = len({item.valid_from for item in brackets})
         return RefreshIncomeTaxBracketsResultDTO(
             year=command.year,
