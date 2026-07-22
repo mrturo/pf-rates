@@ -76,6 +76,7 @@ class StubProvider:
         return self._brackets
 
 
+@pytest.mark.asyncio
 async def test_refresh_income_tax_brackets_upserts_and_counts_months() -> None:
     """Fetched brackets are persisted and the correct month count is returned."""
     repository = StubReferenceDataRepository()
@@ -91,6 +92,7 @@ async def test_refresh_income_tax_brackets_upserts_and_counts_months() -> None:
     assert repository.upserted == [_JAN_BRACKET, _FEB_BRACKET]
 
 
+@pytest.mark.asyncio
 async def test_refresh_income_tax_brackets_raises_when_provider_returns_nothing() -> (
     None
 ):

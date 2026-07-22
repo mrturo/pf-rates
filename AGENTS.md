@@ -78,7 +78,7 @@ class StubMarketDataRepository:
   The path is resolved via the `PF_DB_PATH` env var (default: `../pf-db` — assumes sibling repos).
   In CI the `test` job checks out `mrturo/pf-db` into `_pf-db/` and sets `PF_DB_PATH=_pf-db`.
 - Verify meaningful outputs (return values, state, errors) — not just that methods were called
-- `asyncio_mode = "auto"` in `pyproject.toml` — do not add `@pytest.mark.asyncio`
+- Mark async tests with `@pytest.mark.asyncio` (`asyncio_mode = "strict"` in `pyproject.toml`)
 - 100% coverage required for `src/`
 
 ## Adding a new use case

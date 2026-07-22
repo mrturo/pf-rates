@@ -3,6 +3,8 @@
 from datetime import date, timedelta
 from decimal import Decimal
 
+import pytest
+
 from financial_data.application.dto import (
     EconomicIndexWriteDTO,
     ExchangeRateWriteDTO,
@@ -242,6 +244,7 @@ class EmptyBracketProvider:
         return []
 
 
+@pytest.mark.asyncio
 async def test_execute_syncs_missing_entries() -> None:
     """execute() fetches and persists rates that are absent from the DB."""
     today = date(2026, 1, 15)
@@ -264,6 +267,7 @@ async def test_execute_syncs_missing_entries() -> None:
     assert len(repository.refreshed) > 0
 
 
+@pytest.mark.asyncio
 async def test_execute_skips_already_existing_entries() -> None:
     """execute() does not re-fetch dates/periods already in the DB."""
     today = date(2026, 1, 15)
@@ -310,6 +314,7 @@ async def test_execute_skips_already_existing_entries() -> None:
     assert reference_repository.upserted == []
 
 
+@pytest.mark.asyncio
 async def test_execute_syncs_missing_brackets() -> None:
     """execute() fetches and persists brackets for years not yet in the DB."""
     today = date(2026, 1, 15)
@@ -330,6 +335,7 @@ async def test_execute_syncs_missing_brackets() -> None:
     assert len(reference_repository.upserted) == 2
 
 
+@pytest.mark.asyncio
 async def test_execute_skips_years_with_existing_brackets() -> None:
     """execute() does not re-fetch brackets for years already in the DB."""
     today = date(2026, 1, 15)
@@ -349,6 +355,7 @@ async def test_execute_skips_years_with_existing_brackets() -> None:
     assert reference_repository.upserted == []
 
 
+@pytest.mark.asyncio
 async def test_execute_skips_when_bracket_provider_returns_nothing() -> None:
     """execute() does not upsert when the provider returns no brackets."""
     today = date(2026, 1, 15)
@@ -368,6 +375,7 @@ async def test_execute_skips_when_bracket_provider_returns_nothing() -> None:
     assert reference_repository.upserted == []
 
 
+@pytest.mark.asyncio
 async def test_execute_request_syncs_specific_gaps() -> None:
     """execute_request() syncs only the explicitly requested missing data."""
     repository = StubMarketDataRepository()
@@ -391,6 +399,7 @@ async def test_execute_request_syncs_specific_gaps() -> None:
     assert result.upserted_economic_indices == 1
 
 
+@pytest.mark.asyncio
 async def test_execute_request_skips_empty_lists() -> None:
     """execute_request() is a no-op when all lists are empty."""
     repository = StubMarketDataRepository()
@@ -414,6 +423,7 @@ async def test_execute_request_skips_empty_lists() -> None:
     assert repository.refreshed == []
 
 
+@pytest.mark.asyncio
 async def test_execute_request_skips_when_provider_returns_nothing() -> None:
     """execute_request() does not call refresh_rates if the provider returns nothing."""
     repository = StubMarketDataRepository()
@@ -437,6 +447,7 @@ async def test_execute_request_skips_when_provider_returns_nothing() -> None:
     assert repository.refreshed == []
 
 
+@pytest.mark.asyncio
 async def test_collect_remaining_request_returns_none_when_all_synced() -> None:
     """collect_remaining_request returns None when no gaps remain."""
     today = date(2026, 1, 15)
@@ -462,6 +473,7 @@ async def test_collect_remaining_request_returns_none_when_all_synced() -> None:
     assert remaining is None
 
 
+@pytest.mark.asyncio
 async def test_collect_remaining_request_returns_gaps() -> None:
     """collect_remaining_request returns still-missing entries after a sync."""
     repository = StubMarketDataRepository()  # empty DB — nothing persisted
@@ -485,6 +497,7 @@ async def test_collect_remaining_request_returns_gaps() -> None:
     assert remaining.economic_index_periods["IPC_CL"] == [(2026, 1)]
 
 
+@pytest.mark.asyncio
 async def test_collect_remaining_request_skips_empty_date_and_period_lists() -> None:
     """collect_remaining_request skips currency/index codes with empty request lists."""
     repository = StubMarketDataRepository()
@@ -506,6 +519,7 @@ async def test_collect_remaining_request_skips_empty_date_and_period_lists() -> 
     assert remaining is None
 
 
+@pytest.mark.asyncio
 async def test_execute_refetches_same_day_dates() -> None:
     """execute() re-fetches daily rates stored on the same calendar day as rate_date."""
     today = date(2026, 1, 15)
@@ -536,6 +550,7 @@ async def test_execute_refetches_same_day_dates() -> None:
     assert result.upserted_exchange_rates > 0
 
 
+@pytest.mark.asyncio
 async def test_execute_requests_forward_dates_for_uf_only() -> None:
     """execute() includes future dates in UF requests but not in USD or EUR."""
     today = date(2026, 1, 15)
@@ -561,6 +576,7 @@ async def test_execute_requests_forward_dates_for_uf_only() -> None:
     )
 
 
+@pytest.mark.asyncio
 async def test_execute_custom_lookback_limits_requested_window() -> None:
     """execute(lookback_days=7) requests only 7 days of history, not 365."""
     today = date(2026, 1, 15)

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from testcontainers.postgres import PostgresContainer
@@ -136,7 +137,7 @@ def pg_url() -> str:
         yield dsn
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def db_session(pg_url: str) -> AsyncSession:
     """Yield a live AsyncSession connected to the test database."""
     engine = create_async_engine(pg_url, **_TC_ENGINE_KWARGS)
@@ -150,7 +151,7 @@ async def db_session(pg_url: str) -> AsyncSession:
         await engine.dispose()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def http_client(pg_url: str) -> AsyncClient:
     """Return an AsyncClient wired to a test DB session with no-op sync provider."""
     engine = create_async_engine(pg_url, **_TC_ENGINE_KWARGS)

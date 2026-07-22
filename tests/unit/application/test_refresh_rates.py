@@ -112,6 +112,7 @@ class StubEconomicIndexProvider:
         return None
 
 
+@pytest.mark.asyncio
 async def test_refresh_rates_requires_non_empty_payload() -> None:
     """Test refresh rates requires non empty payload."""
     with pytest.raises(
@@ -123,6 +124,7 @@ async def test_refresh_rates_requires_non_empty_payload() -> None:
         )
 
 
+@pytest.mark.asyncio
 async def test_refresh_rates_normalizes_codes_and_delegates() -> None:
     """Test refresh rates normalizes codes and delegates."""
     repository = StubMarketDataRepository()
@@ -164,6 +166,7 @@ async def test_refresh_rates_normalizes_codes_and_delegates() -> None:
     assert repository.command.economic_indices[0].source == "manual"
 
 
+@pytest.mark.asyncio
 async def test_refresh_rates_fetches_provider_entries_and_keeps_manual_values() -> None:
     """Refresh rates fetches provider-backed entries; manual values take precedence."""
     repository = StubMarketDataRepository()
@@ -220,6 +223,7 @@ async def test_refresh_rates_fetches_provider_entries_and_keeps_manual_values() 
     ]
 
 
+@pytest.mark.asyncio
 async def test_refresh_rates_rejects_missing_provider_configuration_and_misses() -> (
     None
 ):

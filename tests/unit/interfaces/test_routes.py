@@ -10,6 +10,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Any
 
+import pytest
 from httpx import ASGITransport, AsyncClient
 
 from financial_data.application.dto import (
@@ -203,6 +204,7 @@ class _StubSyncUseCase:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 async def test_list_exchange_rates_serializes_non_empty_result() -> None:
     """GET /exchange-rates returns serialized items when repository is non-empty."""
     stub = _StubMarketDataRepository(
@@ -229,6 +231,7 @@ async def test_list_exchange_rates_serializes_non_empty_result() -> None:
         app.dependency_overrides.clear()
 
 
+@pytest.mark.asyncio
 async def test_get_exchange_rate_value_not_found_returns_404() -> None:
     """GET /exchange-rates/value returns 404 when neither DB nor provider has the rate.
 
@@ -247,6 +250,7 @@ async def test_get_exchange_rate_value_not_found_returns_404() -> None:
         app.dependency_overrides.clear()
 
 
+@pytest.mark.asyncio
 async def test_refresh_exchange_rates_returns_upserted_count() -> None:
     """POST /exchange-rates/refresh returns upserted counts from the use case."""
     stub = _StubRefreshRates(
@@ -283,6 +287,7 @@ async def test_refresh_exchange_rates_returns_upserted_count() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 async def test_list_economic_indices_serializes_non_empty_result() -> None:
     """GET /economic-indices returns serialized items when repository is non-empty."""
     stub = _StubMarketDataRepository(
@@ -315,6 +320,7 @@ async def test_list_economic_indices_serializes_non_empty_result() -> None:
         app.dependency_overrides.clear()
 
 
+@pytest.mark.asyncio
 async def test_get_economic_index_value_not_found_returns_404() -> None:
     """GET /economic-indices/value returns 404 when repository returns None."""
     stub = _StubMarketDataRepository(economic_index_value=None)
@@ -330,6 +336,7 @@ async def test_get_economic_index_value_not_found_returns_404() -> None:
         app.dependency_overrides.clear()
 
 
+@pytest.mark.asyncio
 async def test_refresh_economic_indices_returns_upserted_count() -> None:
     """POST /economic-indices/refresh returns upserted counts from the use case."""
     stub = _StubRefreshRates(
@@ -356,6 +363,7 @@ async def test_refresh_economic_indices_returns_upserted_count() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 async def test_get_income_tax_bracket_not_found_returns_404() -> None:
     """GET /income-tax-brackets returns 404 when repository returns None."""
     stub = _StubReferenceDataRepository(bracket=None)
@@ -371,6 +379,7 @@ async def test_get_income_tax_bracket_not_found_returns_404() -> None:
         app.dependency_overrides.clear()
 
 
+@pytest.mark.asyncio
 async def test_get_income_tax_bracket_found_returns_bracket() -> None:
     """GET /income-tax-brackets returns the matching bracket when found."""
     bracket = IncomeTaxBracketDTO(
@@ -398,6 +407,7 @@ async def test_get_income_tax_bracket_found_returns_bracket() -> None:
         app.dependency_overrides.clear()
 
 
+@pytest.mark.asyncio
 async def test_list_income_tax_brackets_serializes_non_empty_result() -> None:
     """GET /income-tax-brackets/list returns serialized bracket items."""
     brackets = [
@@ -425,6 +435,7 @@ async def test_list_income_tax_brackets_serializes_non_empty_result() -> None:
         app.dependency_overrides.clear()
 
 
+@pytest.mark.asyncio
 async def test_refresh_income_tax_brackets_returns_upserted_count() -> None:
     """POST /income-tax-brackets/refresh returns upserted count from the use case."""
     stub = _StubRefreshIncomeTaxBrackets(
@@ -450,6 +461,7 @@ async def test_refresh_income_tax_brackets_returns_upserted_count() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 async def test_get_exchange_rate_value_found_returns_value() -> None:
     """GET /exchange-rates/value returns value_clp when repository returns a value."""
     stub = _StubMarketDataRepository(exchange_rate_value=Decimal("980.500000"))
@@ -466,6 +478,7 @@ async def test_get_exchange_rate_value_found_returns_value() -> None:
         app.dependency_overrides.clear()
 
 
+@pytest.mark.asyncio
 async def test_refresh_exchange_rates_error_returns_502() -> None:
     """POST /exchange-rates/refresh returns 502 on FinancialDataError."""
     app.dependency_overrides[get_refresh_rates_use_case] = lambda: (
@@ -490,6 +503,7 @@ async def test_refresh_exchange_rates_error_returns_502() -> None:
         app.dependency_overrides.clear()
 
 
+@pytest.mark.asyncio
 async def test_get_economic_index_value_found_returns_value() -> None:
     """GET /economic-indices/value returns index_value when repository returns it."""
     stub = _StubMarketDataRepository(economic_index_value=Decimal("112.500000"))
@@ -506,6 +520,7 @@ async def test_get_economic_index_value_found_returns_value() -> None:
         app.dependency_overrides.clear()
 
 
+@pytest.mark.asyncio
 async def test_refresh_economic_indices_error_returns_502() -> None:
     """POST /economic-indices/refresh returns 502 on FinancialDataError."""
     app.dependency_overrides[get_refresh_rates_use_case] = lambda: (
@@ -531,6 +546,7 @@ async def test_refresh_economic_indices_error_returns_502() -> None:
         app.dependency_overrides.clear()
 
 
+@pytest.mark.asyncio
 async def test_refresh_income_tax_brackets_error_returns_502() -> None:
     """POST /income-tax-brackets/refresh returns 502 on FinancialDataError."""
     app.dependency_overrides[get_refresh_income_tax_brackets_use_case] = lambda: (
@@ -547,6 +563,7 @@ async def test_refresh_income_tax_brackets_error_returns_502() -> None:
         app.dependency_overrides.clear()
 
 
+@pytest.mark.asyncio
 async def test_list_currencies_serializes_non_empty_result() -> None:
     """GET /currencies returns serialized CurrencyRead items."""
     stub = _StubReferenceDataRepository()
@@ -569,6 +586,7 @@ async def test_list_currencies_serializes_non_empty_result() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 async def test_sync_market_data_returns_upserted_counts() -> None:
     """POST /sync returns all three upserted-count keys with correct values."""
     app.dependency_overrides[get_sync_use_case] = lambda: _StubSyncUseCase()

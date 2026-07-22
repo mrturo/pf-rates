@@ -23,6 +23,7 @@ from financial_data.interfaces.api.dependencies import (
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 async def test_startup_sync_returns_early_during_pytest() -> None:
     """_run_startup_sync exits immediately when PYTEST_CURRENT_TEST is set."""
     assert "PYTEST_CURRENT_TEST" in os.environ
@@ -30,6 +31,7 @@ async def test_startup_sync_returns_early_during_pytest() -> None:
     await app_module._run_startup_sync()
 
 
+@pytest.mark.asyncio
 async def test_startup_sync_handles_exception_gracefully(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -48,6 +50,7 @@ async def test_startup_sync_handles_exception_gracefully(
     await app_module._run_startup_sync()  # must not raise
 
 
+@pytest.mark.asyncio
 async def test_startup_sync_propagates_cancelled_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -67,6 +70,7 @@ async def test_startup_sync_propagates_cancelled_error(
         await app_module._run_startup_sync()
 
 
+@pytest.mark.asyncio
 async def test_startup_sync_logs_completion(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -104,6 +108,7 @@ async def test_startup_sync_logs_completion(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 async def test_lifespan_cancels_running_task(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -131,6 +136,7 @@ async def test_lifespan_cancels_running_task(
     assert task.cancelled()
 
 
+@pytest.mark.asyncio
 async def test_lifespan_skips_cancel_when_task_already_done(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -274,6 +280,7 @@ def test_get_reference_data_repository_returns_sqla_repository() -> None:
     assert isinstance(repo, SqlAlchemyReferenceDataRepository)
 
 
+@pytest.mark.asyncio
 async def test_get_session_yields_session_from_session_local(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

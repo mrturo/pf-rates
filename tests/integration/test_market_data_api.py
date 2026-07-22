@@ -9,6 +9,7 @@ from datetime import date, UTC
 from decimal import Decimal
 from typing import Any
 
+import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -63,6 +64,7 @@ def _make_session_override(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 async def test_health(http_client: AsyncClient) -> None:
     """GET /health returns ok."""
     response = await http_client.get("/health")
@@ -75,6 +77,7 @@ async def test_health(http_client: AsyncClient) -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 async def test_list_currencies_returns_seed_data(http_client: AsyncClient) -> None:
     """GET /currencies returns the seeded currencies."""
     response = await http_client.get("/currencies")
@@ -88,6 +91,7 @@ async def test_list_currencies_returns_seed_data(http_client: AsyncClient) -> No
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 async def test_list_exchange_rates_empty(http_client: AsyncClient) -> None:
     """GET /exchange-rates returns empty list when no rates stored."""
     response = await http_client.get("/exchange-rates")
@@ -95,6 +99,7 @@ async def test_list_exchange_rates_empty(http_client: AsyncClient) -> None:
     assert response.json() == []
 
 
+@pytest.mark.asyncio
 async def test_refresh_and_list_exchange_rates(http_client: AsyncClient) -> None:
     """POST /exchange-rates/refresh stores entries; GET /exchange-rates lists them."""
     post = await http_client.post(
@@ -121,6 +126,7 @@ async def test_refresh_and_list_exchange_rates(http_client: AsyncClient) -> None
     assert Decimal(items[0]["value_clp"]) == Decimal("980.500000")
 
 
+@pytest.mark.asyncio
 async def test_get_exchange_rate_value_found_and_not_found(
     http_client: AsyncClient,
 ) -> None:
@@ -151,6 +157,7 @@ async def test_get_exchange_rate_value_found_and_not_found(
     assert missing.status_code == 404
 
 
+@pytest.mark.asyncio
 async def test_get_latest_exchange_rate_value_before(
     db_session: AsyncSession,
 ) -> None:
@@ -197,6 +204,7 @@ async def test_get_latest_exchange_rate_value_before(
     assert result_none is None
 
 
+@pytest.mark.asyncio
 async def test_refresh_exchange_rates_rejects_unknown_currency(
     http_client: AsyncClient,
 ) -> None:
@@ -222,6 +230,7 @@ async def test_refresh_exchange_rates_rejects_unknown_currency(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 async def test_list_economic_indices_empty(http_client: AsyncClient) -> None:
     """GET /economic-indices returns empty list when no indices stored."""
     response = await http_client.get("/economic-indices")
@@ -229,6 +238,7 @@ async def test_list_economic_indices_empty(http_client: AsyncClient) -> None:
     assert response.json() == []
 
 
+@pytest.mark.asyncio
 async def test_refresh_and_list_economic_indices(http_client: AsyncClient) -> None:
     """POST /economic-indices/refresh stores entries; GET retrieves them."""
     post = await http_client.post(
@@ -259,6 +269,7 @@ async def test_refresh_and_list_economic_indices(http_client: AsyncClient) -> No
     )
 
 
+@pytest.mark.asyncio
 async def test_get_economic_index_value_found_and_not_found(
     http_client: AsyncClient,
 ) -> None:
@@ -295,6 +306,7 @@ async def test_get_economic_index_value_found_and_not_found(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 async def test_income_tax_brackets_roundtrip(
     http_client: AsyncClient,
     db_session: AsyncSession,
@@ -357,6 +369,7 @@ async def test_income_tax_brackets_roundtrip(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 async def test_sync_endpoint_runs_without_error(http_client: AsyncClient) -> None:
     """POST /sync completes successfully (stub provider returns zeros)."""
     response = await http_client.post("/sync", json={})
@@ -367,6 +380,7 @@ async def test_sync_endpoint_runs_without_error(http_client: AsyncClient) -> Non
     assert "brackets_upserted" in body
 
 
+@pytest.mark.asyncio
 async def test_sync_endpoint_accepts_custom_window(http_client: AsyncClient) -> None:
     """POST /sync accepts optional lookback_days and forward_days overrides."""
     response = await http_client.post(
@@ -377,6 +391,7 @@ async def test_sync_endpoint_accepts_custom_window(http_client: AsyncClient) -> 
     assert "exchange_rates_upserted" in body
 
 
+@pytest.mark.asyncio
 async def test_sync_endpoint_rejects_invalid_window(http_client: AsyncClient) -> None:
     """POST /sync returns 422 for out-of-range window values."""
     response = await http_client.post("/sync", json={"lookback_days": 0})
@@ -388,6 +403,7 @@ async def test_sync_endpoint_rejects_invalid_window(http_client: AsyncClient) ->
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 async def test_refresh_exchange_rates_rejects_empty_payload(
     http_client: AsyncClient,
 ) -> None:
@@ -399,6 +415,7 @@ async def test_refresh_exchange_rates_rejects_empty_payload(
     assert response.status_code == 400
 
 
+@pytest.mark.asyncio
 async def test_get_session_yields_async_session(
     pg_url: str, monkeypatch: object
 ) -> None:
@@ -428,6 +445,7 @@ async def test_get_session_yields_async_session(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 async def test_list_exchange_rate_dates_returns_stored_dates(
     db_session: AsyncSession,
 ) -> None:
@@ -453,6 +471,7 @@ async def test_list_exchange_rate_dates_returns_stored_dates(
     assert date(2026, 3, 10) in stored
 
 
+@pytest.mark.asyncio
 async def test_list_unconfirmed_rate_dates_detects_same_day_rate(
     db_session: AsyncSession,
 ) -> None:
@@ -496,6 +515,7 @@ async def test_list_unconfirmed_rate_dates_detects_same_day_rate(
     assert target_date in unconfirmed
 
 
+@pytest.mark.asyncio
 async def test_list_unconfirmed_rate_dates_detects_pre_publication_fetch(
     db_session: AsyncSession,
 ) -> None:
@@ -540,6 +560,7 @@ async def test_list_unconfirmed_rate_dates_detects_pre_publication_fetch(
     assert future_rate_date in unconfirmed
 
 
+@pytest.mark.asyncio
 async def test_list_unconfirmed_rate_dates_excludes_later_day_fetch(
     db_session: AsyncSession,
 ) -> None:
@@ -570,6 +591,7 @@ async def test_list_unconfirmed_rate_dates_excludes_later_day_fetch(
     assert target_date not in unconfirmed
 
 
+@pytest.mark.asyncio
 async def test_list_economic_index_periods_returns_stored_periods(
     db_session: AsyncSession,
 ) -> None:
@@ -600,6 +622,7 @@ async def test_list_economic_index_periods_returns_stored_periods(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 async def test_list_economic_index_periods_empty_ranges_returns_empty(
     db_session: AsyncSession,
 ) -> None:
@@ -609,6 +632,7 @@ async def test_list_economic_index_periods_empty_ranges_returns_empty(
     assert result == []
 
 
+@pytest.mark.asyncio
 async def test_upsert_income_tax_brackets_empty_returns_zero(
     db_session: AsyncSession,
 ) -> None:
@@ -623,6 +647,7 @@ async def test_upsert_income_tax_brackets_empty_returns_zero(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 async def test_refresh_income_tax_brackets_route_success(pg_url: str) -> None:
     """POST /income-tax-brackets/refresh returns 200 with upserted count."""
     from tests.conftest import _TC_ENGINE_KWARGS  # type: ignore[attr-defined]
@@ -658,6 +683,7 @@ async def test_refresh_income_tax_brackets_route_success(pg_url: str) -> None:
         await engine.dispose()
 
 
+@pytest.mark.asyncio
 async def test_refresh_income_tax_brackets_route_propagates_error(
     pg_url: str,
 ) -> None:
@@ -697,6 +723,7 @@ async def test_refresh_income_tax_brackets_route_propagates_error(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 async def test_refresh_economic_indices_route_propagates_error(pg_url: str) -> None:
     """POST /economic-indices/refresh returns 502 on FinancialDataError."""
     from tests.conftest import _TC_ENGINE_KWARGS  # type: ignore[attr-defined]
@@ -733,6 +760,7 @@ async def test_refresh_economic_indices_route_propagates_error(pg_url: str) -> N
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 async def test_missing_api_key_returns_403() -> None:
     """Protected endpoints return 403 when X-API-Key header is absent."""
     async with AsyncClient(
@@ -742,6 +770,7 @@ async def test_missing_api_key_returns_403() -> None:
     assert response.status_code == 403
 
 
+@pytest.mark.asyncio
 async def test_wrong_api_key_returns_403() -> None:
     """Protected endpoints return 403 when X-API-Key does not match."""
     async with AsyncClient(
@@ -753,6 +782,7 @@ async def test_wrong_api_key_returns_403() -> None:
     assert response.status_code == 403
 
 
+@pytest.mark.asyncio
 async def test_health_endpoint_is_public() -> None:
     """GET /health is accessible without any API key."""
     async with AsyncClient(

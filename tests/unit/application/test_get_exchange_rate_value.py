@@ -95,6 +95,7 @@ class _StubProvider:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 async def test_returns_db_value_when_present() -> None:
     """Step 1: returns the DB value without touching the provider."""
     repo = _StubRepository(db_value=Decimal("980.50"))
@@ -112,6 +113,7 @@ async def test_returns_db_value_when_present() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 async def test_saves_and_returns_provider_value_on_db_miss() -> None:
     """Step 2: persists the provider entry and returns its value on a DB miss."""
     entry = _entry(_PAST)
@@ -131,6 +133,7 @@ async def test_saves_and_returns_provider_value_on_db_miss() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 async def test_returns_nearest_prior_db_value_when_provider_misses() -> None:
     """Step 3: returns the nearest prior DB rate; result is NOT persisted."""
     repo = _StubRepository(db_value=None, fallback_value=Decimal("975.00"))
@@ -148,6 +151,7 @@ async def test_returns_nearest_prior_db_value_when_provider_misses() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 async def test_finds_prior_day_in_provider_on_first_attempt() -> None:
     """Step 4 (day-1): provider loop hits on the first prior day."""
     day_minus_1 = _PAST - timedelta(days=1)
@@ -163,6 +167,7 @@ async def test_finds_prior_day_in_provider_on_first_attempt() -> None:
     assert repo.saved_command.exchange_rates == [prior_entry]
 
 
+@pytest.mark.asyncio
 async def test_finds_prior_day_in_provider_after_several_misses() -> None:
     """Step 4 (day-k>1): provider loop skips empty days before finding a hit."""
     day_minus_3 = _PAST - timedelta(days=3)
@@ -179,6 +184,7 @@ async def test_finds_prior_day_in_provider_after_several_misses() -> None:
     assert repo.saved_command.exchange_rates == [prior_entry]
 
 
+@pytest.mark.asyncio
 async def test_raises_not_found_when_all_sources_exhausted() -> None:
     """Step 5: 404 after exhausting DB prior and all provider lookback days."""
     repo = _StubRepository(db_value=None, fallback_value=None)
@@ -196,6 +202,7 @@ async def test_raises_not_found_when_all_sources_exhausted() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 async def test_future_date_skips_fallback_and_raises_not_found() -> None:
     """Future dates skip steps 3 and 4 entirely and always 404."""
     # Provide a prior-day entry so the test would fail if the loop ran.

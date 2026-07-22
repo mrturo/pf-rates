@@ -6,6 +6,7 @@ from decimal import Decimal
 from pathlib import Path
 from urllib.error import URLError
 
+import pytest
 
 from financial_data.application.dto import (
     EconomicIndexWriteDTO,
@@ -65,6 +66,7 @@ def _index_entries(
     ]
 
 
+@pytest.mark.asyncio
 async def test_mindicador_rate_provider_parses_year_series_and_unknown_indicator() -> (
     None
 ):
@@ -114,6 +116,7 @@ async def test_mindicador_rate_provider_parses_year_series_and_unknown_indicator
     assert await provider.fetch_rate_entries("CLP", [date(2026, 1, 31)]) == []
 
 
+@pytest.mark.asyncio
 async def test_mindicador_rate_provider_returns_none_on_invalid_payload() -> None:
     """Test mindicador rate provider returns none on invalid payload."""
     provider = MindicadorRateProvider(fetcher=lambda url, timeout: "{")
@@ -124,6 +127,7 @@ async def test_mindicador_rate_provider_returns_none_on_invalid_payload() -> Non
     assert await provider.fetch_rate_entries("USD", []) == []
 
 
+@pytest.mark.asyncio
 async def test_mindicador_rate_provider_is_exact_match_only() -> None:
     """Both fetch_rate and fetch_rate_entries return only published dates.
 
@@ -160,6 +164,7 @@ async def test_mindicador_rate_provider_is_exact_match_only() -> None:
     ]
 
 
+@pytest.mark.asyncio
 async def test_mindicador_rate_provider_returns_none_for_unpublished_year() -> None:
     """Test that no cross-year carry-forward is returned for a year with no data.
 
@@ -183,6 +188,7 @@ async def test_mindicador_rate_provider_returns_none_for_unpublished_year() -> N
     assert await provider.fetch_rate_entries("UF", [date(2027, 7, 28)]) == []
 
 
+@pytest.mark.asyncio
 async def test_sii_indicators_provider_parses_utm_and_ipc_rows() -> None:
     """Test sii indicators provider parses utm and ipc rows."""
     html = """
@@ -263,6 +269,7 @@ async def test_sii_indicators_provider_parses_utm_and_ipc_rows() -> None:
     assert await provider.fetch_rate_entries("UF", [date(2026, 1, 1)]) == []
 
 
+@pytest.mark.asyncio
 async def test_sii_indicators_provider_returns_none_for_blank_or_missing_rows() -> None:
     """Test sii indicators provider returns none for blank or missing rows."""
     provider = SiiIndicatorsProvider(
@@ -308,6 +315,7 @@ async def test_sii_indicators_provider_returns_none_for_blank_or_missing_rows() 
     assert await blank_ipc_provider.fetch_indices("IPC_CL", [(2026, 5)]) == []
 
 
+@pytest.mark.asyncio
 async def test_sii_indicators_provider_handles_network_failures() -> None:
     """Test sii indicators provider handles network failures."""
     provider = SiiIndicatorsProvider(
@@ -317,6 +325,7 @@ async def test_sii_indicators_provider_handles_network_failures() -> None:
     assert await provider.fetch_rate("UTM", date(2026, 1, 15)) is None
 
 
+@pytest.mark.asyncio
 async def test_sii_income_tax_bracket_provider_parses_monthly_sections() -> None:
     """Test parsing SII monthly sections into UTM brackets."""
     html = """
@@ -368,6 +377,7 @@ async def test_sii_income_tax_bracket_provider_parses_monthly_sections() -> None
     ]
 
 
+@pytest.mark.asyncio
 async def test_sii_income_tax_bracket_provider_handles_missing_rows_and_failures() -> (
     None
 ):
@@ -386,6 +396,7 @@ async def test_sii_income_tax_bracket_provider_handles_missing_rows_and_failures
     assert await failing.fetch_income_tax_brackets(2026) == []
 
 
+@pytest.mark.asyncio
 async def test_bcch_series_provider_parses_supported_shapes_and_missing_config() -> (
     None
 ):
@@ -449,6 +460,7 @@ async def test_bcch_series_provider_parses_supported_shapes_and_missing_config()
     assert await list_provider.fetch_indices("IPC_CL", []) == []
 
 
+@pytest.mark.asyncio
 async def test_bcch_series_provider_handles_fetch_failures_and_empty_obs() -> None:
     """Test bcch series provider handles fetch failures and empty observations."""
     failing = BcchSeriesProvider(
@@ -480,6 +492,7 @@ async def test_bcch_series_provider_handles_fetch_failures_and_empty_obs() -> No
     assert await missing_values.fetch_indices("IPC_CL", [(2026, 1)]) == []
 
 
+@pytest.mark.asyncio
 async def test_chained_rate_and_index_providers_use_first_success() -> None:
     """Test chained providers stop on first success and swallow failures."""
 
@@ -591,6 +604,7 @@ async def test_chained_rate_and_index_providers_use_first_success() -> None:
     ]
 
 
+@pytest.mark.asyncio
 async def test_chained_bulk_providers_stop_after_full_match() -> None:
     """Test chained bulk providers stop once all requests are satisfied."""
     called = {"fx": 0, "index": 0}
@@ -685,6 +699,7 @@ async def test_chained_bulk_providers_stop_after_full_match() -> None:
     assert called == {"fx": 0, "index": 0}
 
 
+@pytest.mark.asyncio
 async def test_chained_economic_index_provider_returns_none_when_all_miss() -> None:
     """Test chained economic index provider returns none when all providers miss."""
 
@@ -795,6 +810,7 @@ def test_rate_provider_helpers_cover_local_fetch_and_edge_parsing(
     ]
 
 
+@pytest.mark.asyncio
 async def test_chained_fx_fetch_rate_entry_returns_none_when_no_match() -> None:
     """fetch_rate_entry returns None when all providers return None."""
 
@@ -808,6 +824,7 @@ async def test_chained_fx_fetch_rate_entry_returns_none_when_no_match() -> None:
     assert result is None
 
 
+@pytest.mark.asyncio
 async def test_mindicador_empty_serie_returns_empty() -> None:
     """Mindicador returns empty when the API responds with an empty serie list."""
     provider = MindicadorRateProvider(fetcher=lambda url, timeout: '{"serie":[]}')
@@ -816,6 +833,7 @@ async def test_mindicador_empty_serie_returns_empty() -> None:
     assert await provider.fetch_rate_entries("USD", [date(2026, 1, 31)]) == []
 
 
+@pytest.mark.asyncio
 async def test_mindicador_handles_timeout_error() -> None:
     """Mindicador returns empty/None when the fetcher raises TimeoutError."""
     provider = MindicadorRateProvider(
@@ -828,6 +846,7 @@ async def test_mindicador_handles_timeout_error() -> None:
     assert await provider.fetch_rate_entries("USD", [date(2026, 1, 31)]) == []
 
 
+@pytest.mark.asyncio
 async def test_sii_indicators_provider_handles_timeout_error() -> None:
     """SII provider returns empty/None when the fetcher raises TimeoutError."""
     provider = SiiIndicatorsProvider(
@@ -840,6 +859,7 @@ async def test_sii_indicators_provider_handles_timeout_error() -> None:
     assert await provider.fetch_indices("IPC_CL", [(2026, 1)]) == []
 
 
+@pytest.mark.asyncio
 async def test_bcch_series_code_not_configured_returns_empty() -> None:
     """BCCH returns empty when credentials are set but the series code is missing."""
     provider = BcchSeriesProvider(
@@ -853,6 +873,7 @@ async def test_bcch_series_code_not_configured_returns_empty() -> None:
     assert await provider.fetch_indices("IPC_CL", [(2026, 1)]) == []
 
 
+@pytest.mark.asyncio
 async def test_bcch_handles_timeout_error() -> None:
     """BCCH returns empty/None when the fetcher raises TimeoutError."""
     provider = BcchSeriesProvider(
@@ -868,6 +889,7 @@ async def test_bcch_handles_timeout_error() -> None:
     assert await provider.fetch_rate_entries("USD", [date(2026, 1, 31)]) == []
 
 
+@pytest.mark.asyncio
 async def test_chained_provider_logs_exhausted_when_all_providers_return_empty() -> (
     None
 ):
