@@ -75,9 +75,9 @@ Installed automatically by `make install` via `git config core.hooksPath .githoo
 ```python
 class StubMarketDataRepository:
     def __init__(self) -> None:
-        self.saved: list[object] = []
-    async def save(self, items):
-        self.saved = items
+        self.command: RefreshRatesCommandDTO | None = None
+    async def refresh_rates(self, command: RefreshRatesCommandDTO) -> RefreshRatesResultDTO:
+        self.command = command
         return RefreshRatesResultDTO(...)
 ```
 
