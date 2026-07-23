@@ -14,7 +14,7 @@ from financial_data.application.dto import (
     RefreshRatesCommandDTO,
     RefreshRatesResultDTO,
 )
-from financial_data.application.services.normalization import (
+from financial_data.domain.normalization import (
     normalize_exchange_rate_lookup_date,
 )
 from financial_data.infrastructure.db.models.financial_data import (

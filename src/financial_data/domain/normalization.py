@@ -1,4 +1,4 @@
-"""Helpers for normalizing market-data lookup parameters."""
+"""Domain helpers for normalizing market-data lookup parameters."""
 
 from datetime import date
 

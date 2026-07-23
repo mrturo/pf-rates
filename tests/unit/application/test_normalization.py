@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from financial_data.application.services.normalization import (
+from financial_data.domain.normalization import (
     normalize_exchange_rate_lookup_date,
 )
 
