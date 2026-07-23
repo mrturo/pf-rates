@@ -40,7 +40,7 @@ shared/          # Cross-cutting constants
 
 ## Design principles
 
-- Apply DRY, SOLID, Clean Code — avoid god objects; prefer small, focused classes
+- Apply DRY, SOLID, Clean Code, DDD — avoid god objects; prefer small, focused classes
 - Extract constants/mappings/literals to `shared/`; zero duplication in `src/` or `tests/`
 - Orchestration logic belongs in use cases, not routes
 - Never `assert` for production validation; raise from `application/errors.py`
