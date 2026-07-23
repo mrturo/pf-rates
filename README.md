@@ -139,12 +139,13 @@ This repository adopts the following engineering standards and conventions:
 - **PEP 498** for preferred string interpolation via f-strings.
 - **PEP 492** for explicit asynchronous I/O with `async` / `await`.
 - **PEP 621** for project metadata in `pyproject.toml`.
+- **PEP 654** when concurrent failures need to be aggregated and surfaced together.
 - **SemVer** for project versioning.
 - **Twelve-Factor** principles for configuration, dependency declaration, disposability, stateless execution, and logging.
 
 ## Repository structure
 
-- `src/financial_data/domain`: quantization helpers
+- `src/financial_data/domain`: value objects, quantizers, domain helpers
 - `src/financial_data/application`: use cases and ports
 - `src/financial_data/infrastructure`: database, rate providers, logging
 - `src/financial_data/interfaces`: FastAPI entrypoint

@@ -9,7 +9,7 @@ Four layers; dependency flows inward only (interfaces → application → domain
 ```
 interfaces/      # FastAPI (adapter in)
 application/     # Use cases, ports (Protocols), DTOs, services
-domain/          # Pure quantization helpers — no I/O
+domain/          # Value objects, quantizers, domain helpers — no I/O
 infrastructure/  # SQLAlchemy, rate providers (adapters out)
 shared/          # Cross-cutting constants
 ```
@@ -34,7 +34,7 @@ shared/          # Cross-cutting constants
 
 - ruff: `extend-select = ["D", "E", "W", "UP"]`, `pep257` convention
 - Docstrings required for all modules, classes, and functions only
-- PEPs: 484 (mypy), 544 (Protocols), 585 (`list[X]`), 604 (`X | None`), 498 (f-strings), 492 (async/await), 621 (pyproject.toml)
+- PEPs: 484 (mypy), 544 (Protocols), 585 (`list[X]`), 604 (`X | None`), 498 (f-strings), 492 (async/await), 621 (pyproject.toml), 654 (exception groups)
 - Domain dataclasses: `@dataclass(slots=True)`; frozen value objects add `frozen=True`
 - Async throughout; structlog only (`infrastructure/logging/logger.py`) — never `print` or stdlib `logging`
 
@@ -98,8 +98,9 @@ class StubMarketDataRepository:
 4. Wire dependency in `interfaces/api/dependencies.py`
 5. Add route in `interfaces/api/routes/`
 6. Add stub-based unit test in `tests/unit/application/`
-7. If the change requires a new column or table, add a migration in the pf-db repository
-8. `make check` must pass clean
+7. `make check` must pass clean
+
+> **Note:** Schema changes (new tables/columns) are managed exclusively by [pf-db](../pf-db). Coordinate with pf-db maintainers if your use case requires database modifications.
 
 ## CI/CD pipeline
 
